@@ -1,4 +1,4 @@
-package az.code.turaltelegrambot.models;
+package az.code.turaltelegrambot.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

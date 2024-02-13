@@ -1,4 +1,4 @@
-package az.code.turaltelegrambot.models;
+package az.code.turaltelegrambot.entity;
 
 public enum Languages {
     AZ,
