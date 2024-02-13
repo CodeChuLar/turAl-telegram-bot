@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: turAl-telegram-bot
+  datasource:
+    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/tural-telegram-bot
+    username: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: true

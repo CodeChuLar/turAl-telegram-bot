@@ -1,11 +1,11 @@
 package az.code.turaltelegrambot.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Data
@@ -13,21 +13,14 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Answer {
+public class Client {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    long id;
+    long clientId;
+    long chatId;
+    String fullName;
+    String phoneNumber;
 
-    @ManyToOne
-    @JsonIgnore
-    @ToString.Exclude
-    Question question;
-
-    @ManyToOne
-    @JsonIgnore
-    @ToString.Exclude
-    Session session;
-
-    @OneToMany(mappedBy = "answer")
-    List<AnswerLocale> localeList;
+    @OneToMany(mappedBy = "client")
+    List<Session> session;
 }
