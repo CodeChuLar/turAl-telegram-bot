@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.util.List;
+
 @Entity
 @Data
 @Builder
@@ -25,4 +27,7 @@ public class QuestionLocale {
     Languages language;
 
     String translation;
+
+    @OneToMany(mappedBy = "questionLocale")
+    List<Option> options;
 }
