@@ -23,4 +23,10 @@ public class Session {
     Client client;
     boolean active;
     LocalDateTime registeredAt;
+
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "session_id")
+    List<ClientAnswer> clientAnswers;
+
 }
