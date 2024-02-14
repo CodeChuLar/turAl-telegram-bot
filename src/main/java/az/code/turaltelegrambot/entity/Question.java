@@ -10,17 +10,17 @@ import java.util.List;
 
 @Entity
 @Data
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class Question {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
-    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL)
-    private List<QuestionLocale> localeList;
+    @ManyToOne
+    @JoinColumn(name = "localization_id")
+    private Localization localization;
 
-    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL)
-    private List<Answer> answer;
+    @Column(nullable = false)
+    private String content; // Instead of "value", use "content" for question text
 }

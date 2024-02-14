@@ -19,11 +19,8 @@ public class Session {
     @GeneratedValue(strategy = GenerationType.UUID)
     UUID id;
 
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
-    List<Answer> answersList;
-
     @ManyToOne
     Client client;
-    boolean isDone;
+    boolean active;
     LocalDateTime registeredAt;
 }

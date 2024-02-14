@@ -21,6 +21,4 @@ public class Client {
     String fullName;
     String phoneNumber;
 
-    @OneToMany(mappedBy = "client")
-    List<Session> session;
 }

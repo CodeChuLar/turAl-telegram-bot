@@ -5,23 +5,21 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 @Entity
-@Table(name = "options")
+@Table(name = "localizations")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Option {
+public class Localization {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "question_id")
-    private Question question;
-
-    @ManyToOne
-    @JoinColumn(name = "localization_id")
-    private Localization localization;
-
     @Column(nullable = false)
-    private String text;
+    private String key;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Languages language;
+
+    // No "value" field here
 }
