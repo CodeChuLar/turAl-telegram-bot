@@ -20,5 +20,4 @@ public class Client {
     long chatId;
     String fullName;
     String phoneNumber;
-
 }
