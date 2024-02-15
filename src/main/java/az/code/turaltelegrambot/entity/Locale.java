@@ -15,6 +15,8 @@ public class Locale {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
+    @Enumerated(EnumType.STRING)
     Language language;
     String key;
     String value;
