@@ -1,26 +1,21 @@
 package az.code.turaltelegrambot.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 import java.util.List;
-
 @Entity
 @Data
-@AllArgsConstructor
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Question {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "localization_id")
-    private Localization localization;
-
-    @Column(nullable = false)
-    private String content; // Instead of "value", use "content" for question text
+    long id;
+    String key;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "question")
+    List<Option> optionList;
 }
