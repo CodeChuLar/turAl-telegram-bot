@@ -10,3 +10,7 @@ spring:
       ddl-auto: update
     show-sql: false
     open-in-view: true
+
+bot:
+  username: TURAL_AL_bOt
+  token: 6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg

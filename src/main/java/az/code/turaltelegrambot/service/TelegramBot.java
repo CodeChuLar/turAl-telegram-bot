@@ -1,5 +1,9 @@
 package az.code.turaltelegrambot.service;
 
+import az.code.turaltelegrambot.config.BotConfig;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -18,6 +22,11 @@ import java.util.List;
 
 @Service
 public class TelegramBot extends TelegramLongPollingBot {
+    private final BotConfig botConfig;
+
+    public TelegramBot(BotConfig botConfig) {
+        this.botConfig = botConfig;
+    }
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -88,12 +97,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotUsername() {
-        return "TURAL_AL_bOt";
+        return botConfig.getUsername();
     }
 
     @Override
     public String getBotToken() {
-        return "6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg";
+        return botConfig.getToken();
     }
 
 }
