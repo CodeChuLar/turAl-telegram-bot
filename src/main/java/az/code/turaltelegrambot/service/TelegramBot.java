@@ -38,6 +38,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             if ("/start".equals(text)) {
                 sendPhoneRequest(chatId);
             } else if (message.getContact() != null && message.getContact().getPhoneNumber() != null) {
+                System.out.println(message.getContact().getPhoneNumber());
+            } else if (message.getContact().getPhoneNumber() != null) {
                 Contact contact = message.getContact();
                 System.out.println("Received contact: " + contact.getPhoneNumber());
                 removeButtons(chatId);
@@ -84,7 +86,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         sendMessage.setText("Thank you for sharing your contact.");
 
         ReplyKeyboardRemove replyKeyboardRemove = new ReplyKeyboardRemove();
-        replyKeyboardRemove.setRemoveKeyboard(true); // Set removeKeyboard to true
+        replyKeyboardRemove.setRemoveKeyboard(true);
 
         sendMessage.setReplyMarkup(replyKeyboardRemove);
 
