@@ -12,6 +12,7 @@ public class OfferService {
         this.offerRepository = offerRepository;
     }
 
+    //TODO request response ucun dto yazib ele elemek lazimdir.
     public Offer addStudent(Offer offer) {
         return offerRepository.save(offer);
     }
