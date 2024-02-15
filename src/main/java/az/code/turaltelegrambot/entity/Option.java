@@ -16,10 +16,13 @@ public class Option {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     long id;
-    String value;
+
+    String key;
+
     @ManyToOne
     @JsonIgnore
     @ToString.Exclude
     Question question;
+
     long nextQuestionId;
 }
