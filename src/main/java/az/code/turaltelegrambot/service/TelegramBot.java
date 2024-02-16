@@ -1,32 +1,28 @@
 package az.code.turaltelegrambot.service;
 
 import az.code.turaltelegrambot.config.BotConfig;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Contact;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Service
 public class TelegramBot extends TelegramLongPollingBot {
     private final BotConfig botConfig;
+    private static int option1SelectedCount = 0;
 
     public TelegramBot(BotConfig botConfig) {
         this.botConfig = botConfig;
     }
+
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -34,44 +30,62 @@ public class TelegramBot extends TelegramLongPollingBot {
             Message message = update.getMessage();
             long chatId = message.getChatId();
             String text = message.getText();
-
             if ("/start".equals(text)) {
-                sendPhoneRequest(chatId);
-            } else if (message.getContact() != null && message.getContact().getPhoneNumber() != null) {
-                System.out.println(message.getContact().getPhoneNumber());
-            } else if (message.getContact().getPhoneNumber() != null) {
-                Contact contact = message.getContact();
-                System.out.println("Received contact: " + contact.getPhoneNumber());
-                removeButtons(chatId);
-            } else {
-                sendPhoneRequest(chatId);
+                List<String> options = new ArrayList<>();
+                options.add("Istirahet");
+                options.add("Gezinti");
+
+                sendQuestionWithButtons(chatId, "Konlunden nece bir seyahet kecir?", options);
+
             }
+        } else if (update.getCallbackQuery().getData().equals("Istirahet") || update.getCallbackQuery().getData().equals("Gezinti")) {
+            System.out.println(update.getCallbackQuery().getData());
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+            String callbackData = callbackQuery.getData();
+            long chatId = callbackQuery.getMessage().getChatId();
+            List<String> options = new ArrayList<>();
+            options.add("Hersey daxil");
+            options.add("Option 2");
+            sendQuestionWithButtons(chatId, "Nece bir teklif seni maraqlandirir?", options);
+        } else if (update.getCallbackQuery().getData().equals("Hersey daxil")) {
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+//            String callbackData = callbackQuery.getData();
+            long chatId = callbackQuery.getMessage().getChatId();
+            List<String> options = new ArrayList<>();
+            options.add("Olkedaxili");
+            options.add("Olkexarici");
+            sendQuestionWithButtons(chatId, "Olkedaxili yoxsa Olkexarici?", options);
+        } else if (update.getCallbackQuery().getData().equals("Olkexarici") || update.getCallbackQuery().getData().equals("Olkedaxili")) {
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+//            String callbackData = callbackQuery.getData();
+            long chatId = callbackQuery.getMessage().getChatId();
+            List<String> options = new ArrayList<>();
+            options.add("Boyuk qrup ile");
+            options.add("Kicik qrup ile");
+            sendQuestionWithButtons(update.getMessage().getChatId(), "Seyahet tipi ?", options);
         }
     }
 
-    private void sendPhoneRequest(long chatId) {
+    private void sendQuestionWithButtons(long chatId, String question, List<String> options) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(chatId));
-        sendMessage.setText("Please share your phone number with us:");
+        sendMessage.setText(question);
 
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(true);
+        // Create inline keyboard
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        KeyboardRow keyboardRow1 = new KeyboardRow();
-        KeyboardRow keyboardRow2 = new KeyboardRow();
+        for (String option : options) {
+            List<InlineKeyboardButton> rowInline = new ArrayList<>();
+            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
+            inlineKeyboardButton.setText(option);
+            inlineKeyboardButton.setCallbackData(option);
+            rowInline.add(inlineKeyboardButton);
+            rowsInline.add(rowInline);
+        }
 
-        KeyboardButton shareContactButton = new KeyboardButton();
-        shareContactButton.setText("Share Contact");
-        shareContactButton.setRequestContact(true);
-
-        keyboardRow1.add(shareContactButton);
-        keyboard.add(keyboardRow1);
-
-        keyboardMarkup.setKeyboard(keyboard);
-
-        sendMessage.setReplyMarkup(keyboardMarkup);
+        markupInline.setKeyboard(rowsInline);
+        sendMessage.setReplyMarkup(markupInline);
 
         try {
             execute(sendMessage);
@@ -80,22 +94,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void removeButtons(long chatId) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(chatId));
-        sendMessage.setText("Thank you for sharing your contact.");
-
-        ReplyKeyboardRemove replyKeyboardRemove = new ReplyKeyboardRemove();
-        replyKeyboardRemove.setRemoveKeyboard(true);
-
-        sendMessage.setReplyMarkup(replyKeyboardRemove);
-
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public String getBotUsername() {
@@ -106,5 +104,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     public String getBotToken() {
         return botConfig.getToken();
     }
+
 
 }
