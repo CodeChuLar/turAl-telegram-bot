@@ -24,5 +24,5 @@ public class Option {
     @ToString.Exclude
     Question question;
 
-    long nextQuestionId;
+    Long nextQuestionId;
 }
