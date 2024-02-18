@@ -3,12 +3,13 @@ package az.code.turaltelegrambot.service;
 import az.code.turaltelegrambot.config.BotConfig;
 import az.code.turaltelegrambot.entity.Client;
 import az.code.turaltelegrambot.entity.Language;
+import az.code.turaltelegrambot.entity.Option;
+import az.code.turaltelegrambot.entity.Question;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -30,13 +31,25 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private final ClientService clientService;
 
-    public TelegramBot(BotConfig botConfig, ClientService clientService) {
+    private QuestionService questionService;
+    private Long nextQuestionId;
+
+    private LocalizationService localizationService;
+
+    private OptionService optionService;
+
+    public TelegramBot(BotConfig botConfig, ClientService clientService, QuestionService questionService, LocalizationService localizationService, OptionService optionService) {
         this.botConfig = botConfig;
         this.clientService = clientService;
+        this.questionService = questionService;
+        this.localizationService = localizationService;
+        this.optionService = optionService;
     }
 
     private final Set<Long> startedConversations = new HashSet<>();
-    private final Map<Long, Language> chatLanguage = new HashMap<>();
+    private Map<Long, Language> chatLanguage = new HashMap<>();
+
+
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -47,10 +60,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId = message.getChatId();
             if (message.hasText() && !startedConversations.contains(chatId)
                     && message.getText().equalsIgnoreCase("/start")) {
+                System.out.println("11111111111");
                 startedConversations.add(chatId);
                 if (clientService.getByChatId(chatId).isEmpty())
                     sendPhoneRequest(chatId);
             } else if (startedConversations.contains(chatId) && message.hasContact()) {
+                System.out.println("22222222222222");
                 removeButtons(chatId);
                 if (clientService.getByChatId(chatId).isEmpty()) {
                     Contact contact = message.getContact();
@@ -96,63 +111,98 @@ public class TelegramBot extends TelegramLongPollingBot {
                         log.error(e.getMessage());
                     }
                 }
-            } else if (startedConversations.contains(chatId)) {
-                try {
-                    execute(SendMessage.builder().chatId(chatId).text("Please, enter valid answer").build());
-                } catch (TelegramApiException e) {
-                    throw new RuntimeException(e);
-                }
             }
-        } else if (update.hasCallbackQuery()
+//            else if (startedConversations.contains(chatId)) {
+//                try {
+//                    execute(SendMessage.builder().chatId(chatId).text("Please, enter valid answer").build());
+//                } catch (TelegramApiException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+        } else if (update.hasCallbackQuery() || update.hasMessage()
                 && startedConversations.contains(update.getCallbackQuery()
+                .getMessage().getChatId()) || startedConversations.contains(update
                 .getMessage().getChatId())) {
+            System.out.println("21wwww");
             sendNextQuestion(update);
         }
     }
 
     private void sendNextQuestion(Update update) {
-//        Option option = validateOption(update.getCallbackQuery().getMessage().getText());
-        if (update.hasMessage() && update.getMessage().hasText()) {
+
+        if (update.hasMessage() && nextQuestionId == null) {
+            System.out.println("d[sadsdsap[ds[das");
             Message message = update.getMessage();
             long chatId = message.getChatId();
-            String text = message.getText();
-            if ("/start".equals(text)) {
-                List<String> options = new ArrayList<>();
-                options.add("Istirahet");
-                options.add("Gezinti");
 
-                sendQuestionWithButtons(chatId, "Konlunden nece bir seyahet kecir?", options);
+            Question theFirstQuestion = questionService.findById(1L);
+            String key = theFirstQuestion.getKey();
+            List<Option> optionList = theFirstQuestion.getOptionList();
+            nextQuestionId = optionList.get(0).getNextQuestionId();
+
+            sendQuestionWithButtons(chatId, key, optionList.stream().map(option -> option.getKey()).toList());
+
+        } else if (update.hasCallbackQuery() || update.hasMessage()) {
+            //        Option option = validateOption(update.getCallbackQuery().getMessage().getText());
+
+            if (!chatLanguage.containsKey(update.getCallbackQuery().getMessage().getChatId())) {
+                chatLanguage.put(update.getCallbackQuery().getMessage().getChatId(),
+                        Language.getByText(update.getCallbackQuery().getData()));
+                System.out.println("sadasdsadadadasdasd");
+            } else {
+                if (update.hasCallbackQuery()) {
+                    String byLanguageAndValue = localizationService.findByLanguageAndValue(chatLanguage.get(update.getCallbackQuery().getMessage().getChatId()), update.getCallbackQuery().getData());
+                    Option optionByKey = optionService.findByKeyAndQuestionId(byLanguageAndValue, nextQuestionId);
+                    nextQuestionId = optionByKey.getNextQuestionId();
+                } else if (update.hasMessage()){
+//                    nextQuestionId= 9L;
+                    System.out.println("dasdads");
+                    nextQuestionId= questionService.findById(nextQuestionId).getOptionList().get(0).getNextQuestionId();
+                }
+            }
+        }
+
+        Question byId = questionService.findById(nextQuestionId);
+//            System.out.println(byId.getOptionList().get(0));
+
+        System.out.println(byId);
+//        String translatedQuestion = localizationService.translate(byId.getKey(),
+//                chatLanguage.get(update.getCallbackQuery().getMessage().getChatId()));
+        if (update.hasMessage()) {
+            String translatedQuestion = localizationService.translate(byId.getKey(),
+                    chatLanguage.get(update.getMessage().getChatId()));
+            sendQuestion(update.getMessage().getChatId(), translatedQuestion);
+        } else {
+            String translatedQuestion = localizationService.translate(byId.getKey(),
+                    chatLanguage.get(update.getCallbackQuery().getMessage().getChatId()));
+            if (byId.getOptionList().get(0).getKey() == null){
+                sendQuestion(update.getCallbackQuery().getMessage().getChatId(), translatedQuestion);
+            }
+            else {
+                List<String> translatedOptions = byId.getOptionList().stream().map(option -> localizationService.translate(
+                        option.getKey(), chatLanguage.get(update.getCallbackQuery().getMessage().getChatId()))).toList();
+                sendQuestionWithButtons(update.getCallbackQuery().getMessage().getChatId(), translatedQuestion, translatedOptions);
+
 
             }
-        } else if (update.getCallbackQuery().getData().equals("Istirahet") || update.getCallbackQuery().getData().equals("Gezinti")) {
-            System.out.println(update.getCallbackQuery().getData());
-            CallbackQuery callbackQuery = update.getCallbackQuery();
-            String callbackData = callbackQuery.getData();
-            long chatId = callbackQuery.getMessage().getChatId();
-            List<String> options = new ArrayList<>();
-            options.add("Hersey daxil");
-            options.add("Option 2");
-            sendQuestionWithButtons(chatId, "Nece bir teklif seni maraqlandirir?", options);
-        } else if (update.getCallbackQuery().getData().equals("Hersey daxil")) {
-            CallbackQuery callbackQuery = update.getCallbackQuery();
-//            String callbackData = callbackQuery.getData();
-            long chatId = callbackQuery.getMessage().getChatId();
-            List<String> options = new ArrayList<>();
-            options.add("Olkedaxili");
-            options.add("Olkexarici");
-            sendQuestionWithButtons(chatId, "Olkedaxili yoxsa Olkexarici?", options);
-        } else if (update.getCallbackQuery().getData().equals("Olkexarici") || update.getCallbackQuery().getData().equals("Olkedaxili")) {
-            CallbackQuery callbackQuery = update.getCallbackQuery();
-//            String callbackData = callbackQuery.getData();
-            long chatId = callbackQuery.getMessage().getChatId();
-            List<String> options = new ArrayList<>();
-            options.add("Boyuk qrup ile");
-            options.add("Kicik qrup ile");
-            sendQuestionWithButtons(update.getMessage().getChatId(), "Seyahet tipi ?", options);
         }
     }
 
-    private void sendQuestionWithButtons(long chatId, String question, List<String> options) {
+
+
+    public void sendQuestion(long chatId, String question) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(chatId));
+        sendMessage.setText(question);
+
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendQuestionWithButtons(long chatId, String question, List<String> optionsKeys) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(chatId));
         sendMessage.setText(question);
@@ -161,11 +211,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
-        for (String option : options) {
+        for (String optionKey : optionsKeys) {
             List<InlineKeyboardButton> rowInline = new ArrayList<>();
             InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            inlineKeyboardButton.setText(option);
-            inlineKeyboardButton.setCallbackData(option);
+            inlineKeyboardButton.setText(optionKey);
+            inlineKeyboardButton.setCallbackData(optionKey);
             rowInline.add(inlineKeyboardButton);
             rowsInline.add(rowInline);
         }
@@ -180,47 +230,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-        /*long chatId;
-        if (update.hasCallbackQuery()) {
-            chatId = update.getCallbackQuery().getMessage().getChatId();
-            String answer = update.getCallbackQuery().getData();
-            System.out.println("Answer: " + answer);
-        } else {
-            chatId = update.getMessage().getChatId();
-            Language language;
-            if (update.getMessage().hasText())
-                language = Language.getByText(update.getMessage().getText());
-//                if (language != null) {
-//                    chatLanguage = language;
-//                } else {
-//                    try {
-//                        execute(SendMessage.builder().chatId(chatId).text("Please choose from available options").build());
-//                    } catch (TelegramApiException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }
-            System.out.println("Message: " + update.getMessage().getText());
-        }
-
-        String questionText = "What is your favorite color?";
-        List<String> options = new ArrayList<>();
-        options.add("Red");
-        options.add("Blue");
-        options.add("Green");
-
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(questionText);
-
-        InlineKeyboardMarkup markupInline = getInlineKeyboardMarkup(options);
-
-        sendMessage.setReplyMarkup(markupInline);
-
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-        }*/
 
 
     @NotNull

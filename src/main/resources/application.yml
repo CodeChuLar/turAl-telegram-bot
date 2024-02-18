@@ -2,7 +2,7 @@ spring:
   application:
     name: turAl-telegram-bot
   datasource:
-    password: ${DB_PASSWORD}
+    password: 200320052003Baku
     url: jdbc:postgresql://localhost:5432/tural-telegram-bot
     username: postgres
   jpa:
@@ -14,3 +14,6 @@ spring:
 bot:
   username: TURAL_AL_bOt
   token: 6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg
+
+server:
+  port: 8091
