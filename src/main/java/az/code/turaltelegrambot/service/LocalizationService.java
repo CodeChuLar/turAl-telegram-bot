@@ -17,4 +17,8 @@ public class LocalizationService {
     public String translate(String key, Language language) {
         return localeRepository.findByKeyAndLanguage(key, language).getValue();
     }
+
+    public String findByLanguageAndValue(Language language, String value){
+        return localeRepository.findByLanguageAndValue(language, value).getKey();
+    }
 }
