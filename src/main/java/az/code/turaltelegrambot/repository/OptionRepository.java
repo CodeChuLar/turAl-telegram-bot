@@ -6,13 +6,13 @@ import az.code.turaltelegrambot.entity.Question;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface OptionRepository  extends JpaRepository<Option, Long> {
 
     Option findFirstByKey(String key);
-//    Optional<Option> findByKey(String key);
-
-    Optional<Option> findByKeyAndQuestion_Id(String key, Long questionId);
+    Optional<Option> findByKey(String key);
+    List<Option> findByQuestion_Id(Long questionId);
 
 }

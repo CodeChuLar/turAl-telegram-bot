@@ -4,22 +4,23 @@ import az.code.turaltelegrambot.entity.Option;
 import az.code.turaltelegrambot.repository.OptionRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
+
 @Service
 public class OptionService {
-
     private final OptionRepository optionRepository;
 
     public OptionService(OptionRepository optionRepository) {
         this.optionRepository = optionRepository;
     }
 
-    public Option findByKeyAndQuestionId(String optionKey, Long questionId) {
-        return optionRepository.findByKeyAndQuestion_Id(optionKey, questionId).get();
+    public List<Option> findByQuestionId(Long questionId) {
+        return optionRepository.findByQuestion_Id(questionId);
     }
 
-//    public Option findByKey(String key) {
-//        Option byKey = optionRepository.findByKey(key).get();
-//        return byKey;
-//    }
+    public Optional<Option> findByKey(String key) {
+        return optionRepository.findByKey(key);
+    }
 
 }
