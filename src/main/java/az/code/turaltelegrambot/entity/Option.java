@@ -1,6 +1,7 @@
 package az.code.turaltelegrambot.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -24,5 +25,6 @@ public class Option {
     @ToString.Exclude
     Question question;
 
+    @NonNull
     Long nextQuestionId;
 }
