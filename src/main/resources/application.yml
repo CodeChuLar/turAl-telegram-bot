@@ -14,4 +14,4 @@ spring:
 bot:
   username: TURAL_AL_bOt
   token: 6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg
-  path:  https://3af9-82-194-17-140.ngrok-free.app
+  path:  ${NGROK}

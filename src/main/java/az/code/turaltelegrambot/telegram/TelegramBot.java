@@ -1,10 +1,7 @@
 package az.code.turaltelegrambot.telegram;
 
 import az.code.turaltelegrambot.entity.*;
-import az.code.turaltelegrambot.service.ClientService;
-import az.code.turaltelegrambot.service.LocalizationService;
-import az.code.turaltelegrambot.service.OptionService;
-import az.code.turaltelegrambot.service.QuestionService;
+import az.code.turaltelegrambot.service.*;
 import az.code.turaltelegrambot.telegram.util.LastQuestion;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
@@ -13,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -40,12 +38,15 @@ public class TelegramBot extends TelegramWebhookBot {
     private String botUsername;
     @Value("${bot.path}")
     private String webhookPath;
+
     private final ClientService clientService;
     private final QuestionService questionService;
     private final LocalizationService localizationService;
     private final OptionService optionService;
+    private final SessionService sessionService;
+
     Set<Long> startedConversations = new HashSet<>(); //TODO startedconversations-u redisde saxlamaq lazimdir ki serveri restart edsek itmesin
-    Map<Long, Language> chatLanguage = new HashMap<>();
+    private final Map<Long, Language> chatLanguage = new HashMap<>();
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
@@ -88,7 +89,6 @@ public class TelegramBot extends TelegramWebhookBot {
 
     private boolean checkMessage(Message message) {
         boolean valid = false;
-        System.out.println("LastQuestion.getLastBotMessage().getText: " + LastQuestion.getLastBotMessage().getText());
         Optional<Question> previousQuestionWithNoOptions = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
         if (message.hasText() && previousQuestionWithNoOptions.isPresent())
             valid = true;
@@ -97,7 +97,6 @@ public class TelegramBot extends TelegramWebhookBot {
 
     private void sendQuestionAfterAnswer(Update update) {
         Message message = update.getMessage();
-        System.out.println("freetext: " + message.getText());
         Optional<Question> previousQuestionWithNullOption = questionService.findByKey(
                 localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
 
@@ -145,6 +144,14 @@ public class TelegramBot extends TelegramWebhookBot {
 
     private void sendNextQuestionByOption(Update update) {
         if (update.hasCallbackQuery()) {
+            try {
+                execute(AnswerCallbackQuery.builder()
+                        .callbackQueryId(update.getCallbackQuery()
+                                .getId())
+                        .build());
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+            }
             MaybeInaccessibleMessage maybeMessage = update.getCallbackQuery().getMessage();
 
             if (maybeMessage instanceof Message) {
@@ -153,16 +160,17 @@ public class TelegramBot extends TelegramWebhookBot {
 
                 if (!chatLanguage.containsKey(chatId))
                     setLanguage(chatId, update.getCallbackQuery().getData());
-                if (LastQuestion.getLastBotMessage() != null) {
-                    Optional<Question> previousQuestion = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
-
-                    if (previousQuestion.isPresent()) {
-                        assert chosenOption != null;
-                        if (chosenOption.getNextQuestionId() > previousQuestion.get().getId()) {
-                            System.out.println(previousQuestion.get().getKey());
-                        }
-                    }
-                }
+                //TODO delete/stop pressed buttons
+//                if (LastQuestion.getLastBotMessage() != null) {
+//                    Optional<Question> previousQuestion = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
+//
+//                    if (previousQuestion.isPresent()) {
+//                        assert chosenOption != null;
+//                        if (chosenOption.getNextQuestionId() > previousQuestion.get().getId()) {
+//                            System.out.println(previousQuestion.get().getKey());
+//                        }
+//                    }
+//                }
 
                 Optional<Question> nextQuestion = questionService.findById(Objects.requireNonNull(chosenOption).getNextQuestionId());
                 if (nextQuestion.isPresent()) {
@@ -191,6 +199,8 @@ public class TelegramBot extends TelegramWebhookBot {
                     log.error(e.getMessage());
                 }
             }
+
+
         }
     }
 
@@ -203,16 +213,23 @@ public class TelegramBot extends TelegramWebhookBot {
                     .active(true)
                     .registeredAt(LocalDateTime.now())
                     .build();
-            //TODO sessionService.create(session);
+            sessionService.create(session);
             System.out.println("Session with id: " + session.getId() + "is now active");
-            String waitingMessage = getTranslatedWaitingMessage(chatLanguage.get(chatId));
-            assert waitingMessage != null;
-            SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(waitingMessage).build();
-            try {
-                execute(sendMessage);
-            } catch (TelegramApiException e) {
-                log.error(e.getMessage());
-            }
+
+            //TODO connect session to redis
+
+            sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
+        }
+    }
+
+    private void sendWaitingMessageToClient(Long chatId, Language language) {
+        String waitingMessage = getTranslatedWaitingMessage(language);
+        assert waitingMessage != null;
+        SendMessage sendMessage = SendMessage.builder().chatId(chatId).text(waitingMessage).build();
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
         }
     }
 
