@@ -202,7 +202,7 @@ public class TelegramBot extends TelegramWebhookBot {
                             .toList();
 
                     HashMap<String, String> answersMap = new HashMap<>();
-                    answersMap.put(nextQuestion.get().getKey(), "");
+                    answersMap.put(nextQuestion.get().getKey(), chosenOption.getKey());
                     redisService.save(new RedisEntity(chatId, chatLanguage.get(chatId), nextQuestion.get().getKey(), answersMap, true));
 
                     sendQuestion(chatId, translatedQuestion, translatedOptions);
