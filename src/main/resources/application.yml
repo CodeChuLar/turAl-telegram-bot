@@ -10,8 +10,16 @@ spring:
       ddl-auto: update
     show-sql: false
     open-in-view: true
+  main:
+    allow-bean-definition-overriding: true
 
 bot:
   username: TURAL_AL_bOt
   token: 6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg
   path:  ${NGROK}
+
+redis:
+  host: ${WEB_FORM_REDIS_HOST:localhost}
+  port: ${WEB_FORM_REDIS_HOST:6379}
+  username: ${WEB_FORM_REDIS_HOST:}
+  password: ${WEB_FORM_REDIS_HOST:}
