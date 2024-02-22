@@ -1,6 +1,8 @@
 package az.code.turaltelegrambot.telegram;
 
 import az.code.turaltelegrambot.entity.*;
+import az.code.turaltelegrambot.redis.RedisEntity;
+import az.code.turaltelegrambot.redis.RedisService;
 import az.code.turaltelegrambot.service.*;
 import az.code.turaltelegrambot.telegram.util.LastQuestion;
 import jakarta.annotation.PostConstruct;
@@ -44,8 +46,7 @@ public class TelegramBot extends TelegramWebhookBot {
     private final LocalizationService localizationService;
     private final OptionService optionService;
     private final SessionService sessionService;
-
-    Set<Long> startedConversations = new HashSet<>(); //TODO startedconversations-u redisde saxlamaq lazimdir ki serveri restart edsek itmesin
+    private final RedisService redisService;
     private final Map<Long, Language> chatLanguage = new HashMap<>();
 
     @Override
@@ -53,35 +54,43 @@ public class TelegramBot extends TelegramWebhookBot {
         if (update.hasMessage()) {
             Message message = update.getMessage();
             long chatId = message.getChatId();
-            if (message.hasText() && !startedConversations.contains(chatId)
+            Optional<RedisEntity> redisEntity = redisService.findByChatId(chatId);
+
+            if (message.hasText() && redisEntity.isEmpty()
                     && message.getText().equalsIgnoreCase("/start")) {
-                startedConversations.add(chatId);
-                if (clientService.getByChatId(chatId).isEmpty())
+                RedisEntity newEntity = RedisEntity.builder()
+                        .chatId(chatId)
+                        .isActive(true)
+                        .build();
+                redisService.save(newEntity);
+
+                if (clientService.getByChatId(chatId).isEmpty()) {
                     sendPhoneRequest(chatId);
+                }
             } else if (message.hasText() && message.getText().equalsIgnoreCase("/stop")) {
                 handleStopRequest(chatId);
-            } else if (startedConversations.contains(chatId) && message.hasContact()) {
+            } else if (redisEntity.isPresent() && message.hasContact()) {
                 removeButtons(chatId);
                 if (clientService.getByChatId(chatId).isEmpty()) {
                     handleNewClient(message);
                 }
                 sendFirstQuestion(update);
             } else {
-                if (startedConversations.contains(message.getChatId()) && checkMessage(message))
+                if (redisEntity.isPresent() && checkMessage(message)) {
                     sendQuestionAfterAnswer(update);
-                else {
+                } else {
                     try {
                         execute(SendMessage.builder()
                                 .chatId(chatId)
-                                .text("Please enter valid option")
+                                .text("Please enter a valid option")
                                 .build());
                     } catch (TelegramApiException e) {
                         log.error(e.getMessage());
                     }
                 }
             }
-        } else if (update.hasCallbackQuery()
-                && startedConversations.contains(update.getCallbackQuery().getMessage().getChatId())) {
+
+        } else if (update.hasCallbackQuery()) {
             sendNextQuestionByOption(update);
         }
         return null;
@@ -97,28 +106,35 @@ public class TelegramBot extends TelegramWebhookBot {
 
     private void sendQuestionAfterAnswer(Update update) {
         Message message = update.getMessage();
+        System.out.println("freetext: " + message.getText());
         Optional<Question> previousQuestionWithNullOption = questionService.findByKey(
                 localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
 
-//        System.out.println("size: " + previousQuestionWithNullOption.get().getOptionList().size());
         if (previousQuestionWithNullOption.isPresent()
                 && !previousQuestionWithNullOption.get().getOptionList().isEmpty()
                 && previousQuestionWithNullOption.get().getOptionList().size() == 1) {
             Option nullOption = previousQuestionWithNullOption.get().getOptionList().get(0);
             Optional<Question> nextQuestion = questionService.findById(nullOption.getNextQuestionId());
             if (nextQuestion.isPresent()) {
+                HashMap<String, String> answersMap = new HashMap<>();
+                answersMap.put(nextQuestion.get().getKey(), message.getText());
+                redisService.save(new RedisEntity(message.getChatId(), chatLanguage.get(message.getChatId()), nextQuestion.get().getKey(), answersMap, true));
+
                 String translatedQuestion = localizationService.translate(nextQuestion.get().getKey(), chatLanguage.get(message.getChatId()));
                 List<String> translatedOptions = optionService.findByQuestionId(nextQuestion.get().getId()).stream()
                         .map(option -> localizationService.translate(option.getKey(), chatLanguage.get(message.getChatId())))
                         .toList();
                 sendQuestion(message.getChatId(), translatedQuestion, translatedOptions);
+
                 Message message1 = new Message();
                 Chat chat = new Chat();
                 chat.setId(message.getChatId());
                 message1.setChat(chat);
                 message1.setText(translatedQuestion);
                 LastQuestion.setLastBotMessage(message1);
-            } else handleNewSession(message.getChatId());
+            } else {
+                handleNewSession(message.getChatId());
+            }
         }
     }
 
@@ -129,16 +145,22 @@ public class TelegramBot extends TelegramWebhookBot {
         if (theFirstQuestion.isPresent()) {
             String key = theFirstQuestion.get().getKey();
             List<Option> optionList = theFirstQuestion.get().getOptionList();
+
+            HashMap<String, String> answersMap = new HashMap<>();
+            answersMap.put(key, message.getText());
+            redisService.save(new RedisEntity(chatId, Language.AZ, key, answersMap, true));
+
             sendQuestion(chatId,
                     localizationService.translate(key, Language.AZ),
                     optionList.stream().map(Option::getKey)
                             .toList());
+
             Message message1 = new Message();
             Chat chat = new Chat();
             chat.setId(chatId);
             message1.setChat(chat);
             message1.setText(localizationService.translate(key, Language.AZ));
-            LastQuestion.setLastBotMessage(message);
+            LastQuestion.setLastBotMessage(message1);
         }
     }
 
@@ -178,6 +200,11 @@ public class TelegramBot extends TelegramWebhookBot {
                     List<String> translatedOptions = optionService.findByQuestionId(nextQuestion.get().getId()).stream()
                             .map(option -> localizationService.translate(option.getKey(), chatLanguage.get(chatId)))
                             .toList();
+
+                    HashMap<String, String> answersMap = new HashMap<>();
+                    answersMap.put(nextQuestion.get().getKey(), "");
+                    redisService.save(new RedisEntity(chatId, chatLanguage.get(chatId), nextQuestion.get().getKey(), answersMap, true));
+
                     sendQuestion(chatId, translatedQuestion, translatedOptions);
                     Message message = new Message();
                     Chat chat = new Chat();
@@ -217,6 +244,7 @@ public class TelegramBot extends TelegramWebhookBot {
             System.out.println("Session with id: " + session.getId() + "is now active");
 
             //TODO connect session to redis
+            redisService.remove(chatId);
 
             sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
         }
@@ -278,8 +306,9 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     private void handleStopRequest(long chatId) {
-        if (startedConversations.contains(chatId)) {
-            startedConversations.remove(chatId);
+        Optional<RedisEntity> redisEntity = redisService.findByChatId(chatId);
+        if (redisEntity.isPresent()) {
+            redisService.remove(chatId);
             if (clientService.getByChatId(chatId).isPresent()) {
                 clientService.delete(clientService.getByChatId(chatId).get().getClientId());
             }
