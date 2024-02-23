@@ -1,5 +1,6 @@
 package az.code.turaltelegrambot.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -24,4 +25,6 @@ public class Session {
     Client client;
     boolean active;
     LocalDateTime registeredAt;
+
+    private String answers;
 }
