@@ -12,14 +12,29 @@ spring:
     open-in-view: true
   main:
     allow-bean-definition-overriding: true
+  kafka:
+    producer:
+      bootstrap-servers: ${KAFKA_HOST_NAME:localhost}:${KAFKA_PORT:9092}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: all
+        retries: 10
+        retry.backoff.ms: 1000
+        max.block.ms: 20000
+        delivery.timeout.ms: 30000
+    admin:
+      properties:
+        bootstrap.servers: ${KAFKA_HOST_NAME:localhost}:${KAFKA_PORT:9092}
 
 bot:
   username: TURAL_AL_bOt
   token: 6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg
-  path:  ${NGROK}
+  path: ${NGROK}
 
 redis:
   host: ${WEB_FORM_REDIS_HOST:localhost}
   port: ${WEB_FORM_REDIS_HOST:6379}
   username: ${WEB_FORM_REDIS_HOST:}
   password: ${WEB_FORM_REDIS_HOST:}
+
