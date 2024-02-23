@@ -254,10 +254,37 @@ public class TelegramBot extends TelegramWebhookBot {
         }
     }
 
+//    private void handleNewSession(Long chatId) {
+//        Optional<Client> client = clientService.getByChatId(chatId);
+//        if (client.isPresent()) {
+//            JSONObject object = new JSONObject(redisEntity.getAnswers());
+//
+//            Session session = Session.builder()
+//                    .id(UUID.randomUUID())
+//                    .client(client.get())
+//                    .answers(object.toString())
+//                    .active(true)
+//                    .registeredAt(LocalDateTime.now())
+//                    .build();
+//            sessionService.create(session);
+//            System.out.println("Session with id: " + session.getId() + "is now active");
+//
+//            List<Header> headers = new ArrayList<>();
+//            headers.add(new RecordHeader("Accept-Language", "az".getBytes()));
+//            kafkaTemplate.send(new ProducerRecord<String, String>("session-front-topic", object.toString()));
+//
+//            redisService.clearCache();
+//
+//            sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
+//        }
+//    }
+
     private void handleNewSession(Long chatId) {
         Optional<Client> client = clientService.getByChatId(chatId);
         if (client.isPresent()) {
-            JSONObject object = new JSONObject(redisEntity.getAnswers());
+            JSONObject object = new JSONObject();
+
+            redisEntity.getAnswers().forEach((key, value) -> object.put(key, value));
 
             Session session = Session.builder()
                     .id(UUID.randomUUID())
@@ -341,6 +368,7 @@ public class TelegramBot extends TelegramWebhookBot {
             if (clientService.getByChatId(chatId).isPresent()) {
                 clientService.delete(clientService.getByChatId(chatId).get().getClientId());
             }
+            chatLanguage.remove(chatId);
             try {
                 removeButtons(chatId);
                 execute(SendMessage.builder().chatId(chatId).text("Chat stopped.").build());
