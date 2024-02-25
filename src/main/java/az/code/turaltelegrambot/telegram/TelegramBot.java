@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
+//import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -34,8 +35,15 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static java.awt.SystemColor.text;
 
 @Slf4j
 @Component
@@ -57,6 +65,9 @@ public class TelegramBot extends TelegramWebhookBot {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final RedisEntity redisEntity = new RedisEntity();
     private final Map<Long, Language> chatLanguage = new HashMap<>();
+    static final String DATE_PATTERN = "dd.MM.yyyy";
+    static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern(DATE_PATTERN);
+
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
@@ -107,9 +118,48 @@ public class TelegramBot extends TelegramWebhookBot {
     private boolean checkMessage(Message message) {
         boolean valid = false;
         Optional<Question> previousQuestionWithNoOptions = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
-        if (message.hasText() && previousQuestionWithNoOptions.isPresent())
-            valid = true;
-        return valid;
+        if (message.hasText() && previousQuestionWithNoOptions.isPresent()) {
+            if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange")) {
+                String regexPattern = "\\d{2}\\.\\d{2}\\.\\d{4},\\d{2}\\.\\d{2}\\.\\d{4}";
+                Pattern pattern = Pattern.compile(regexPattern);
+                Matcher matcher = pattern.matcher(message.getText());
+                System.out.println(message.getText());
+                if (matcher.matches()) {
+                    String matchedDates = matcher.group();
+                    String[] dates = matchedDates.split(",");
+                    String firstDate = dates[0];
+                    String secondDate = dates[1];
+                    LocalDate firstLocalDate;
+                    LocalDate secondLocalDate;
+                    try {
+                        firstLocalDate = LocalDate.parse(firstDate, DATE_FORMATTER);
+                        secondLocalDate = LocalDate.parse(secondDate, DATE_FORMATTER);
+                    } catch (DateTimeParseException e) {
+                        return false;
+                    }
+
+                    LocalDate today = LocalDate.now();
+                    if (firstLocalDate.isAfter(today.plusDays(1)) && firstLocalDate.isBefore(secondLocalDate)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+//                return matcher.matches();
+                }
+            }
+            else if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("budget")) {
+                try {
+                    long l = Long.parseLong(message.getText());
+                    System.out.println(l);
+                    return true;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+
+            }
+            return true;
+        }
+        return  true;
     }
 
     private void sendQuestionAfterAnswer(Update update) {
