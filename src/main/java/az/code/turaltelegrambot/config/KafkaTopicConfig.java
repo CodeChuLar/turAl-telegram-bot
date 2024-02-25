@@ -9,7 +9,16 @@ import org.springframework.kafka.config.TopicBuilder;
 public class KafkaTopicConfig {
     @Bean
     public NewTopic sessionSender() {
-        return TopicBuilder.name("session-front-topic")
+        return TopicBuilder.name("session-new-topic")
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+
+    @Bean
+    public NewTopic clientSender() {
+        return TopicBuilder.name("client-new-topic")
                 .partitions(3)
                 .replicas(1)
                 .build();

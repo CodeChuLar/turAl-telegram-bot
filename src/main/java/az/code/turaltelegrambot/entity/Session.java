@@ -26,5 +26,6 @@ public class Session {
     boolean active;
     LocalDateTime registeredAt;
 
+    @JsonProperty("answers")
     private String answers;
 }
