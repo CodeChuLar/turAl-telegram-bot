@@ -62,7 +62,7 @@ public class TelegramBot extends TelegramWebhookBot {
     private final OptionService optionService;
     private final SessionService sessionService;
     private final RedisService redisService;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final RedisEntity redisEntity = new RedisEntity();
     private final Map<Long, Language> chatLanguage = new HashMap<>();
     static final String DATE_PATTERN = "dd.MM.yyyy";
@@ -146,8 +146,7 @@ public class TelegramBot extends TelegramWebhookBot {
                     }
 //                return matcher.matches();
                 }
-            }
-            else if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("budget")) {
+            } else if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("budget")) {
                 try {
                     long l = Long.parseLong(message.getText());
                     System.out.println(l);
@@ -159,7 +158,7 @@ public class TelegramBot extends TelegramWebhookBot {
             }
             return true;
         }
-        return  true;
+        return true;
     }
 
     private void sendQuestionAfterAnswer(Update update) {
@@ -344,16 +343,20 @@ public class TelegramBot extends TelegramWebhookBot {
                     .registeredAt(LocalDateTime.now())
                     .build();
             sessionService.create(session);
-            System.out.println("Session with id: " + session.getId() + "is now active");
+            System.out.println("Session with id: " + session.getId() + " is now active");
 
-            List<Header> headers = new ArrayList<>();
-            headers.add(new RecordHeader("Accept-Language", "az".getBytes()));
-            kafkaTemplate.send(new ProducerRecord<String, String>("session-front-topic", object.toString()));
+            // Instead of sending just the JSON object, send the session object
+            sendSessionToAnotherApp(session);
 
             redisService.clearCache();
 
             sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
         }
+    }
+
+    private void sendSessionToAnotherApp(Session session) {
+        // Assuming you have a KafkaTemplate initialized in your TelegramBot class
+        kafkaTemplate.send(new ProducerRecord<>("session-new-topic", session));
     }
 
     private void sendWaitingMessageToClient(Long chatId, Language language) {
@@ -449,6 +452,8 @@ public class TelegramBot extends TelegramWebhookBot {
                 .build();
         clientService.create(clientCreated);
 
+        sendClientToAnotherApp(clientCreated);
+
         try {
             execute(SendMessage.builder()
                     .chatId(chatId)
@@ -457,6 +462,11 @@ public class TelegramBot extends TelegramWebhookBot {
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
         }
+    }
+
+    private void sendClientToAnotherApp(Client client) {
+        // Assuming you have a KafkaTemplate initialized in your TelegramBot class
+        kafkaTemplate.send(new ProducerRecord<>("client-new-topic", client));
     }
 
     private void sendQuestion(long chatId, String question, List<String> options) {

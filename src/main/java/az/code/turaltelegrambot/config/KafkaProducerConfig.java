@@ -1,5 +1,7 @@
 package az.code.turaltelegrambot.config;
 
+import az.code.turaltelegrambot.entity.Client;
+import az.code.turaltelegrambot.entity.Session;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -32,24 +34,12 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    ProducerFactory<String, Object> objectProducerFactory() {
+    ProducerFactory<String, Object> producerFactory() {
         return new DefaultKafkaProducerFactory<>(producerConfigs());
     }
 
     @Bean
-    KafkaTemplate<String, Object> userKafkaTemplate() {
-        return new KafkaTemplate<>(objectProducerFactory());
-    }
-
-    @Bean
-    ProducerFactory<String, String> producerFactory() {
-        return new DefaultKafkaProducerFactory<>(producerConfigs());
-    }
-
-    @Bean
-    KafkaTemplate<String, String> kafkaTemplate() {
-        KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(producerFactory());
-        kafkaTemplate.setMessageConverter(new StringJsonMessageConverter());
-        return kafkaTemplate;
+    KafkaTemplate<String, Object> KafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
     }
 }
