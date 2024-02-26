@@ -5,16 +5,11 @@ import az.code.turaltelegrambot.redis.RedisEntity;
 import az.code.turaltelegrambot.redis.RedisService;
 import az.code.turaltelegrambot.service.*;
 import az.code.turaltelegrambot.telegram.util.LastQuestion;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
-//import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.header.internals.RecordHeader;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -42,8 +37,6 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static java.awt.SystemColor.text;
 
 @Slf4j
 @Component
@@ -116,14 +109,14 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     private boolean checkMessage(Message message) {
-        boolean valid = false;
+//        boolean valid = false;
         Optional<Question> previousQuestionWithNoOptions = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
         if (message.hasText() && previousQuestionWithNoOptions.isPresent()) {
             if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange")) {
                 String regexPattern = "\\d{2}\\.\\d{2}\\.\\d{4},\\d{2}\\.\\d{2}\\.\\d{4}";
                 Pattern pattern = Pattern.compile(regexPattern);
                 Matcher matcher = pattern.matcher(message.getText());
-                System.out.println(message.getText());
+
                 if (matcher.matches()) {
                     String matchedDates = matcher.group();
                     String[] dates = matchedDates.split(",");
@@ -139,14 +132,12 @@ public class TelegramBot extends TelegramWebhookBot {
                     }
 
                     LocalDate today = LocalDate.now();
-                    if (firstLocalDate.isAfter(today.plusDays(1)) && firstLocalDate.isBefore(secondLocalDate)) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-//                return matcher.matches();
+                    return firstLocalDate.isAfter(today.plusDays(1))
+                            && firstLocalDate.isBefore(secondLocalDate);
                 }
-            } else if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("budget")) {
+            } else if (previousQuestionWithNoOptions.get()
+                    .getOptionList().get(0).getKey()
+                    .equals("budget")) {
                 try {
                     long l = Long.parseLong(message.getText());
                     System.out.println(l);
@@ -304,37 +295,12 @@ public class TelegramBot extends TelegramWebhookBot {
         }
     }
 
-//    private void handleNewSession(Long chatId) {
-//        Optional<Client> client = clientService.getByChatId(chatId);
-//        if (client.isPresent()) {
-//            JSONObject object = new JSONObject(redisEntity.getAnswers());
-//
-//            Session session = Session.builder()
-//                    .id(UUID.randomUUID())
-//                    .client(client.get())
-//                    .answers(object.toString())
-//                    .active(true)
-//                    .registeredAt(LocalDateTime.now())
-//                    .build();
-//            sessionService.create(session);
-//            System.out.println("Session with id: " + session.getId() + "is now active");
-//
-//            List<Header> headers = new ArrayList<>();
-//            headers.add(new RecordHeader("Accept-Language", "az".getBytes()));
-//            kafkaTemplate.send(new ProducerRecord<String, String>("session-front-topic", object.toString()));
-//
-//            redisService.clearCache();
-//
-//            sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
-//        }
-//    }
-
     private void handleNewSession(Long chatId) {
         Optional<Client> client = clientService.getByChatId(chatId);
         if (client.isPresent()) {
             JSONObject object = new JSONObject();
 
-            redisEntity.getAnswers().forEach((key, value) -> object.put(key, value));
+            redisEntity.getAnswers().forEach(object::put);
 
             Session session = Session.builder()
                     .id(UUID.randomUUID())
