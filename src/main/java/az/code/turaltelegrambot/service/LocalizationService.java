@@ -1,27 +1,9 @@
 package az.code.turaltelegrambot.service;
 
 import az.code.turaltelegrambot.entity.Language;
-import az.code.turaltelegrambot.entity.Locale;
-import az.code.turaltelegrambot.repository.LocaleRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+public interface LocalizationService {
+    String translate(String key, Language language);
 
-
-@Service
-@RequiredArgsConstructor
-public class LocalizationService {
-    private final LocaleRepository localeRepository;
-
-    public String translate(String key, Language language) {
-        Optional<Locale> locale = localeRepository.findByKeyAndLanguage(key, language);
-        return locale.map(Locale::getValue).orElse(null);
-    }
-
-    public String findByValue(String value){
-        if (localeRepository.findByValue(value).isPresent())
-            return localeRepository.findByValue(value).get().getKey();
-        return null;
-    }
+    String findByValue(String value);
 }
