@@ -272,9 +272,10 @@ public class TelegramBot extends TelegramWebhookBot {
 //                    answersMap.put(nextQuestion.get().getKey(), chosenOption.getKey());
 //                    redisService.save(new RedisEntity(chatId, chatLanguage.get(chatId), nextQuestion.get().getKey(), answersMap, true));
 
+                    String translatedChosenOption = localizationService.translate(chosenOption.getKey(), chatLanguage.get(chatId));
                     redisEntity.setCurrentQuestion(nextQuestion.get().getKey());
                     redisEntity.setLanguage(chatLanguage.get(chatId));
-                    redisEntity.getAnswers().put(nextQuestion.get().getKey(), chosenOption.getKey());
+                    redisEntity.getAnswers().put(nextQuestion.get().getKey(), translatedChosenOption);
                     redisService.save(redisEntity);
 
                     sendQuestion(chatId, translatedQuestion, translatedOptions);
