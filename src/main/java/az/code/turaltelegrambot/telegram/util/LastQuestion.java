@@ -5,7 +5,10 @@ import lombok.Setter;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 public class LastQuestion {
-    @Setter
     @Getter
     private static Message lastBotMessage;
+
+    public static void setLastBotMessage(Message lastBotMessage) {
+        LastQuestion.lastBotMessage = lastBotMessage;
+    }
 }

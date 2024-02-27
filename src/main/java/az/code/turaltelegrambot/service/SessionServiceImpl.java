@@ -5,6 +5,7 @@ import az.code.turaltelegrambot.repository.SessionRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -14,6 +15,9 @@ public class SessionServiceImpl implements SessionService {
     @Override
     public Session get(UUID uuid) {
         return sessionRepo.getReferenceById(uuid);
+    }
+    public Optional<Session> getByChatId(long chatId){
+        return sessionRepo.findByClient_ChatId(chatId);
     }
 
     @Override
