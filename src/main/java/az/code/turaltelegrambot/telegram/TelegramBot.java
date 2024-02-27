@@ -112,40 +112,48 @@ public class TelegramBot extends TelegramWebhookBot {
 //        boolean valid = false;
         Optional<Question> previousQuestionWithNoOptions = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
         if (message.hasText() && previousQuestionWithNoOptions.isPresent()) {
-            if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange")) {
-                String regexPattern = "\\d{2}\\.\\d{2}\\.\\d{4},\\d{2}\\.\\d{2}\\.\\d{4}";
-                Pattern pattern = Pattern.compile(regexPattern);
-                Matcher matcher = pattern.matcher(message.getText());
+            if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange") ||
+                    previousQuestionWithNoOptions.get()
+                            .getOptionList().get(0).getKey()
+                            .equals("budget")) {
 
-                if (matcher.matches()) {
-                    String matchedDates = matcher.group();
-                    String[] dates = matchedDates.split(",");
-                    String firstDate = dates[0];
-                    String secondDate = dates[1];
-                    LocalDate firstLocalDate;
-                    LocalDate secondLocalDate;
+
+                if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange")) {
+                    String regexPattern = "\\d{2}\\.\\d{2}\\.\\d{4},\\d{2}\\.\\d{2}\\.\\d{4}";
+                    Pattern pattern = Pattern.compile(regexPattern);
+                    Matcher matcher = pattern.matcher(message.getText());
+
+                    if (matcher.matches()) {
+                        String matchedDates = matcher.group();
+                        String[] dates = matchedDates.split(",");
+                        String firstDate = dates[0];
+                        String secondDate = dates[1];
+                        LocalDate firstLocalDate;
+                        LocalDate secondLocalDate;
+                        try {
+                            firstLocalDate = LocalDate.parse(firstDate, DATE_FORMATTER);
+                            secondLocalDate = LocalDate.parse(secondDate, DATE_FORMATTER);
+                        } catch (DateTimeParseException e) {
+                            return false;
+                        }
+
+                        LocalDate today = LocalDate.now();
+                        return firstLocalDate.isAfter(today.plusDays(1))
+                                && firstLocalDate.isBefore(secondLocalDate);
+                    }
+                } else if (previousQuestionWithNoOptions.get()
+                        .getOptionList().get(0).getKey()
+                        .equals("budget")) {
                     try {
-                        firstLocalDate = LocalDate.parse(firstDate, DATE_FORMATTER);
-                        secondLocalDate = LocalDate.parse(secondDate, DATE_FORMATTER);
-                    } catch (DateTimeParseException e) {
+                        long l = Long.parseLong(message.getText());
+                        System.out.println(l);
+                        return true;
+                    } catch (NumberFormatException e) {
                         return false;
                     }
 
-                    LocalDate today = LocalDate.now();
-                    return firstLocalDate.isAfter(today.plusDays(1))
-                            && firstLocalDate.isBefore(secondLocalDate);
                 }
-            } else if (previousQuestionWithNoOptions.get()
-                    .getOptionList().get(0).getKey()
-                    .equals("budget")) {
-                try {
-                    long l = Long.parseLong(message.getText());
-                    System.out.println(l);
-                    return true;
-                } catch (NumberFormatException e) {
-                    return false;
-                }
-
+                return false;
             }
             return true;
         }
