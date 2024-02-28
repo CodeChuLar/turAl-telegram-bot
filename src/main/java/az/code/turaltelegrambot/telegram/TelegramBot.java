@@ -4,7 +4,7 @@ import az.code.turaltelegrambot.entity.*;
 import az.code.turaltelegrambot.redis.RedisEntity;
 import az.code.turaltelegrambot.redis.RedisService;
 import az.code.turaltelegrambot.service.*;
-import az.code.turaltelegrambot.telegram.util.LastQuestion;
+import az.code.turaltelegrambot.telegram.util.CurrentQuestion;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +16,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -109,14 +110,16 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     private boolean checkMessage(Message message) {
-//        boolean valid = false;
-        Optional<Question> previousQuestionWithNoOptions = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
+        if (CurrentQuestion.getMessage() == null)
+            return false;
+
+        Optional<Question> previousQuestionWithNoOptions = questionService.findByKey(localizationService
+                .findByValue(CurrentQuestion.getMessage().getText()));
         if (message.hasText() && previousQuestionWithNoOptions.isPresent()) {
             if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange") ||
                     previousQuestionWithNoOptions.get()
                             .getOptionList().get(0).getKey()
                             .equals("budget")) {
-
 
                 if (previousQuestionWithNoOptions.get().getOptionList().get(0).getKey().equals("dateRange")) {
                     String regexPattern = "\\d{2}\\.\\d{2}\\.\\d{4},\\d{2}\\.\\d{2}\\.\\d{4}";
@@ -163,7 +166,7 @@ public class TelegramBot extends TelegramWebhookBot {
     private void sendQuestionAfterAnswer(Update update) {
         Message message = update.getMessage();
         Optional<Question> previousQuestionWithNullOption = questionService.findByKey(
-                localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
+                localizationService.findByValue(CurrentQuestion.getMessage().getText()));
 
         if (previousQuestionWithNullOption.isPresent()
                 && !previousQuestionWithNullOption.get().getOptionList().isEmpty()
@@ -191,7 +194,7 @@ public class TelegramBot extends TelegramWebhookBot {
                 chat.setId(message.getChatId());
                 message1.setChat(chat);
                 message1.setText(translatedQuestion);
-                LastQuestion.setLastBotMessage(message1);
+                CurrentQuestion.setMessage(message1);
             } else {
                 handleNewSession(message.getChatId());
             }
@@ -221,7 +224,7 @@ public class TelegramBot extends TelegramWebhookBot {
             chat.setId(chatId);
             message1.setChat(chat);
             message1.setText(localizationService.translate(key, Language.AZ));
-            LastQuestion.setLastBotMessage(message1);
+            CurrentQuestion.setMessage(message1);
         }
     }
 
@@ -243,17 +246,6 @@ public class TelegramBot extends TelegramWebhookBot {
 
                 if (!chatLanguage.containsKey(chatId))
                     setLanguage(chatId, update.getCallbackQuery().getData());
-                //TODO delete/stop pressed buttons
-//                if (LastQuestion.getLastBotMessage() != null) {
-//                    Optional<Question> previousQuestion = questionService.findByKey(localizationService.findByValue(LastQuestion.getLastBotMessage().getText()));
-//
-//                    if (previousQuestion.isPresent()) {
-//                        assert chosenOption != null;
-//                        if (chosenOption.getNextQuestionId() > previousQuestion.get().getId()) {
-//                            System.out.println(previousQuestion.get().getKey());
-//                        }
-//                    }
-//                }
 
                 Optional<Question> nextQuestion = questionService.findById(Objects
                         .requireNonNull(chosenOption).getNextQuestionId());
@@ -278,7 +270,7 @@ public class TelegramBot extends TelegramWebhookBot {
                     chat.setId(chatId);
                     message.setChat(chat);
                     message.setText(translatedQuestion);
-                    LastQuestion.setLastBotMessage(message);
+                    CurrentQuestion.setMessage(message);
                 } else if (clientService.getByChatId(chatId).isPresent()) {
                     handleNewSession(chatId);
                 }
@@ -325,7 +317,6 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     private void sendSessionToAnotherApp(Session session) {
-        // Assuming you have a KafkaTemplate initialized in your TelegramBot class
         kafkaTemplate.send(new ProducerRecord<>("session-new-topic", session));
     }
 
@@ -373,15 +364,26 @@ public class TelegramBot extends TelegramWebhookBot {
 
     private Option getChosenOption(String answer, long chatId) {
         String optionKey = localizationService.findByValue(answer);
-        if (optionService.findByKey(optionKey).isPresent())
-            return optionService.findByKey(optionKey).get();
+        Optional<Option> chosenOption = optionService.findByKey(optionKey);
 
-        try {
-            execute(SendMessage.builder().chatId(chatId).text("Please choose one").build());
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
+        if (chosenOption.isPresent()) {
+            String formattedChosenOption = "*" + answer + "*";
+
+            try {
+                execute(SendMessage.builder().chatId(chatId).text("You chose: " + formattedChosenOption).parseMode(ParseMode.MARKDOWN).build());
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+            }
+
+            return chosenOption.get();
+        } else {
+            try {
+                execute(SendMessage.builder().chatId(chatId).text("Please choose one").build());
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
+            }
+            return null;
         }
-        return null;
     }
 
     private void handleStopRequest(long chatId) {
