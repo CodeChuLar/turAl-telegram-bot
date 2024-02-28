@@ -26,6 +26,10 @@ spring:
     admin:
       properties:
         bootstrap.servers: ${KAFKA_HOST_NAME:localhost}:${KAFKA_PORT:9092}
+    consumer:
+      bootstrap-servers: ${KAFKA_HOST_NAME:localhost}:${KAFKA_PORT:9092}
+      properties:
+        group-id: telegram-bot
 
 bot:
   username: TURAL_AL_bOt
@@ -37,4 +41,3 @@ redis:
   port: ${WEB_FORM_REDIS_HOST:6379}
   username: ${WEB_FORM_REDIS_HOST:}
   password: ${WEB_FORM_REDIS_HOST:}
-
