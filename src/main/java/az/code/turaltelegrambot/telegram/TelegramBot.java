@@ -311,14 +311,14 @@ public class TelegramBot extends TelegramWebhookBot {
             redisEntity.getAnswers().forEach(object::put);
 
             Session session = Session.builder()
-                    .id(UUID.randomUUID())
+                    .sessionId(UUID.randomUUID())
                     .client(client.get())
                     .answers(object.toString())
                     .active(true)
                     .registeredAt(LocalDateTime.now())
                     .build();
             sessionService.create(session);
-            System.out.println("Session with id: " + session.getId() + " is now active");
+            System.out.println("Session with id: " + session.getSessionId() + " is now active");
 
             // Instead of sending just the JSON object, send the session object
             sendSessionToAnotherApp(session);
