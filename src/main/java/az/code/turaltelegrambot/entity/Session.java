@@ -19,7 +19,7 @@ import java.util.UUID;
 public class Session {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    UUID id;
+    UUID sessionId;
 
     @ManyToOne
     Client client;

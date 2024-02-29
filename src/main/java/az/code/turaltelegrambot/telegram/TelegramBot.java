@@ -177,7 +177,7 @@ public class TelegramBot extends TelegramWebhookBot {
         }
     }
 
-    private void sendQuestionAfterAnswer(long chatId, String answer) {
+private void sendQuestionAfterAnswer(long chatId, String answer) {
         Optional<RedisEntity> currentRedis = redisService.findByChatId(chatId);
 
         if (currentRedis.isPresent() && currentRedis.get().getCurrentQuestionKey() != null) {
@@ -201,6 +201,49 @@ public class TelegramBot extends TelegramWebhookBot {
                 }
             }
         }
+    }
+
+private void handleNewSession(Long chatId) {
+        Optional<Client> client = clientService.getByChatId(chatId);
+        Optional<RedisEntity> currentRedis = redisService.findByChatId(chatId);
+
+        if (currentRedis.isPresent() && currentRedis.get().getCurrentQuestionKey() == null) {
+            if (client.isPresent()) {
+                JSONObject object = new JSONObject();
+
+                currentRedis.get().getAnswers().forEach(object::put);
+
+                Session session = Session.builder()
+                        .id(UUID.randomUUID())
+                        .client(client.get())
+                        .answers(object.toString())
+                        .active(true)
+                        .registeredAt(LocalDateTime.now())
+                        .build();
+                sessionService.create(session);
+                log.info("Session with id: " + session.getId() + " created and is now active");
+
+                // Instead of sending just the JSON object, send the session object
+                sendSessionToAnotherApp(session);
+
+                redisService.clearCache();
+
+                sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
+            } else {
+                try {
+                    throw new Exception("Client does not exist, but quiz is finished");
+                } catch (Exception e) {
+                    log.error(e.getMessage());
+                }
+            }
+        } else {
+            try {
+                throw new Exception("Current question is not answered, but quiz is finished.");
+            } catch (Exception e) {
+                log.error(e.getMessage());
+            }
+        }
+
     }
 
     private void prepareAndSendQuestion(Long chatId, Optional<Question> nextQuestion) {
