@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="tural-telegram-bot@localhost" uuid="a7c9cfb9-984d-4525-9dc4-a1ca1b1cde99">
+    <data-source source="LOCAL" name="tural-telegram-bot@localhost" uuid="0850acf2-dfcb-40dd-b031-035c77917cee">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>

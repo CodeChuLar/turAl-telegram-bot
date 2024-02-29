@@ -13,10 +13,10 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @RequiredArgsConstructor
 @Slf4j
 public class WebhookController {
-    private final TelegramBot bootcampBot;
+    private final TelegramBot telegramBot;
     @PostMapping
     public BotApiMethod<?> onUpdateReceived(@RequestBody Update update) {
-        return bootcampBot.onWebhookUpdateReceived(update);
+        return telegramBot.onWebhookUpdateReceived(update);
     }
 
 }

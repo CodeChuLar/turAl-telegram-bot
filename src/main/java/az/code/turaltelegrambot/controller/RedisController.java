@@ -5,9 +5,12 @@ import az.code.turaltelegrambot.redis.RedisEntity;
 import az.code.turaltelegrambot.redis.RedisService;
 import az.code.turaltelegrambot.repository.ClientRepo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/redis")
@@ -22,8 +25,11 @@ public class RedisController {
     }
 
     @GetMapping("/{chatId}")
-    public RedisEntity getByChatId(@PathVariable Long chatId) {
-        return redisService.findByChatId(chatId).get();
+    public ResponseEntity<RedisEntity> getByChatId(@PathVariable Long chatId) {
+        Optional<RedisEntity> redisEntity = redisService.findByChatId(chatId);
+        return redisEntity.map(entity ->
+                new ResponseEntity<>(entity, HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
     }
 
     @GetMapping("/getall")
