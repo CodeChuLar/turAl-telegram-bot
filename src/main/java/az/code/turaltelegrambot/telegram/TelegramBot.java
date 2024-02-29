@@ -460,9 +460,7 @@ public class TelegramBot extends TelegramWebhookBot {
 
         List<Session> sessions = sessionService.allSessionsByChatId(chatId);
         if (!sessions.isEmpty())
-            sessions.forEach(session -> {
-                sessionService.delete(session.getId());
-            });
+            sessions.forEach(session -> sessionService.delete(session.getId()));
 
         Optional<Client> client = clientService.getByChatId(chatId);
         client.ifPresent(value -> clientService.delete(value.getClientId()));
