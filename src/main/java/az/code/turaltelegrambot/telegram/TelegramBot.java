@@ -261,7 +261,7 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     public boolean checkAnswer(Message message, RedisEntity currentRedis) {
-        if (currentRedis==null || currentRedis.getCurrentQuestionKey() == null)
+        if (currentRedis == null || currentRedis.getCurrentQuestionKey() == null)
             return false;
 
         Optional<Question> currentQuestion = questionService.findByKey(currentRedis.getCurrentQuestionKey());
@@ -365,7 +365,7 @@ public class TelegramBot extends TelegramWebhookBot {
                         .registeredAt(LocalDateTime.now())
                         .build();
                 sessionService.create(session);
-                System.out.println("Session with id: " + session.getId() + " created and is now active");
+                log.info("Session with id: " + session.getId() + " created and is now active");
 
                 // Instead of sending just the JSON object, send the session object
                 sendSessionToAnotherApp(session);
@@ -426,17 +426,19 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     private void handleStopRequest(long chatId) {
-        Optional<RedisEntity> redisEntity = redisService.findByChatId(chatId);
-        if (redisEntity.isPresent()) {
-            redisService.remove(chatId);
-            redisService.clearCache();
+        Optional<RedisEntity> currentRedis = redisService.findByChatId(chatId);
+        List<Session> activeSessions = sessionService.getActiveSessions(chatId);
+        if (currentRedis.isPresent() || !activeSessions.isEmpty()) {
+            if (currentRedis.isPresent()) {
+                redisService.remove(chatId);
+                redisService.clearCache();
+            }
             chatLanguage.remove(chatId);
 
-            List<Session> activeSessions = sessionService.getActiveSessions(chatId);
             if (!activeSessions.isEmpty()) {
                 activeSessions.forEach(session -> {
                     session.setActive(false);
-                    sessionService.update(session.getId() !=null ? session.getId() : UUID.fromString(""), session);
+                    sessionService.update(session.getId() != null ? session.getId() : UUID.fromString(""), session);
                 });
             }
 
