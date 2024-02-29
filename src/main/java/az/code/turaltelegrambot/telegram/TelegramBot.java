@@ -177,7 +177,7 @@ public class TelegramBot extends TelegramWebhookBot {
         }
     }
 
-private void sendQuestionAfterAnswer(long chatId, String answer) {
+    private void sendQuestionAfterAnswer(long chatId, String answer) {
         Optional<RedisEntity> currentRedis = redisService.findByChatId(chatId);
 
         if (currentRedis.isPresent() && currentRedis.get().getCurrentQuestionKey() != null) {
@@ -189,7 +189,7 @@ private void sendQuestionAfterAnswer(long chatId, String answer) {
                 Optional<Question> nextQuestion = questionService.findById(nullOption.getNextQuestionId());
 
                 currentRedis.get().setLanguage(chatLanguage.get(chatId));
-                currentRedis.get().getAnswers().put(localizationService.findByValue(currentRedis.get().getCurrentQuestionKey()), answer);
+                currentRedis.get().getAnswers().put(currentRedis.get().getCurrentQuestionKey(), answer);
                 if (nextQuestion.isPresent()) {
                     prepareAndSendQuestion(chatId, nextQuestion);
                     currentRedis.get().setCurrentQuestionKey(nextQuestion.get().getKey());
@@ -201,49 +201,6 @@ private void sendQuestionAfterAnswer(long chatId, String answer) {
                 }
             }
         }
-    }
-
-private void handleNewSession(Long chatId) {
-        Optional<Client> client = clientService.getByChatId(chatId);
-        Optional<RedisEntity> currentRedis = redisService.findByChatId(chatId);
-
-        if (currentRedis.isPresent() && currentRedis.get().getCurrentQuestionKey() == null) {
-            if (client.isPresent()) {
-                JSONObject object = new JSONObject();
-
-                currentRedis.get().getAnswers().forEach(object::put);
-
-                Session session = Session.builder()
-                        .id(UUID.randomUUID())
-                        .client(client.get())
-                        .answers(object.toString())
-                        .active(true)
-                        .registeredAt(LocalDateTime.now())
-                        .build();
-                sessionService.create(session);
-                log.info("Session with id: " + session.getId() + " created and is now active");
-
-                // Instead of sending just the JSON object, send the session object
-                sendSessionToAnotherApp(session);
-
-                redisService.clearCache();
-
-                sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
-            } else {
-                try {
-                    throw new Exception("Client does not exist, but quiz is finished");
-                } catch (Exception e) {
-                    log.error(e.getMessage());
-                }
-            }
-        } else {
-            try {
-                throw new Exception("Current question is not answered, but quiz is finished.");
-            } catch (Exception e) {
-                log.error(e.getMessage());
-            }
-        }
-
     }
 
     private void prepareAndSendQuestion(Long chatId, Optional<Question> nextQuestion) {
@@ -399,14 +356,14 @@ private void handleNewSession(Long chatId) {
                 currentRedis.get().getAnswers().forEach(object::put);
 
                 Session session = Session.builder()
-                        .id(UUID.randomUUID())
+                        .sessionId(UUID.randomUUID())
                         .client(client.get())
                         .answers(object.toString())
                         .active(true)
                         .registeredAt(LocalDateTime.now())
                         .build();
                 sessionService.create(session);
-                log.info("Session with id: " + session.getId() + " created and is now active");
+                log.info("Session with id: " + session.getSessionId() + " created and is now active");
 
                 // Instead of sending just the JSON object, send the session object
                 sendSessionToAnotherApp(session);
@@ -479,7 +436,7 @@ private void handleNewSession(Long chatId) {
             if (!activeSessions.isEmpty()) {
                 activeSessions.forEach(session -> {
                     session.setActive(false);
-                    sessionService.update(session.getId() != null ? session.getId() : UUID.fromString(""), session);
+                    sessionService.update(session.getSessionId() != null ? session.getSessionId() : UUID.fromString(""), session);
                 });
             }
 
@@ -503,7 +460,7 @@ private void handleNewSession(Long chatId) {
 
         List<Session> sessions = sessionService.allSessionsByChatId(chatId);
         if (!sessions.isEmpty())
-            sessions.forEach(session -> sessionService.delete(session.getId()));
+            sessions.forEach(session -> sessionService.delete(session.getSessionId()));
 
         Optional<Client> client = clientService.getByChatId(chatId);
         client.ifPresent(value -> clientService.delete(value.getClientId()));
