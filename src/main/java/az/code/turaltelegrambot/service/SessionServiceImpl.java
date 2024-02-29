@@ -5,6 +5,8 @@ import az.code.turaltelegrambot.repository.SessionRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -17,16 +19,30 @@ public class SessionServiceImpl implements SessionService {
     }
 
     @Override
+    public List<Session> allSessionsByChatId(long chatId) {
+        return sessionRepo.findAllByClient_ChatId(chatId);
+    }
+
+    public List<Session> getActiveSessions(long chatId){
+        return sessionRepo.findByClient_ChatId(chatId)
+                .stream()
+                .filter(Session::isActive)
+                .toList();
+    }
+
+    @Override
     public Session create(Session session) {
         return sessionRepo.save(session);
     }
 
     @Override
-    public Session update(UUID uuid, Session session) {
-        Session updatingSession = sessionRepo.getReferenceById(uuid);
-        sessionRepo.delete(updatingSession);
-        updatingSession=session;
-        return sessionRepo.save(updatingSession);
+    public Session update(UUID uuid, Session updatedSession) {
+        Optional<Session> optionalSession = sessionRepo.findById(uuid);
+        if (optionalSession.isPresent()) {
+            Session updatingSession = optionalSession.get();
+            updatingSession.setActive(updatedSession.isActive());
+            return sessionRepo.save(updatingSession);
+        } else return null;
     }
 
     @Override

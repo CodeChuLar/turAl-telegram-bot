@@ -21,7 +21,7 @@ public class RedisEntity implements Serializable {
     @Id
     private Long chatId;
     private Language language;
-    private String currentQuestion;
+    private String currentQuestionKey;
     private HashMap<String, String> answers = new HashMap<>();
     private boolean isActive;
 }
