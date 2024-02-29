@@ -75,8 +75,6 @@ public class TelegramBot extends TelegramWebhookBot {
 
             if (message.hasText() && redisFindByChatId.isEmpty()
                     && message.getText().equalsIgnoreCase("/start")) {
-//                redisEntity.setChatId(chatId);
-//                redisEntity.setActive(true);
                 redisService.save(RedisEntity.builder()
                         .chatId(chatId)
                         .isActive(true)
