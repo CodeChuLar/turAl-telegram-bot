@@ -9,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+//@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Table(name = "locales")
 public class Locale {
@@ -20,4 +21,6 @@ public class Locale {
     Language language;
     String key;
     String value;
+
+
 }
