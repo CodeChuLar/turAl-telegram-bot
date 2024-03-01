@@ -17,6 +17,7 @@ public class OfferKafkaListener {
 
     private final ObjectMapper objectMapper;
     private final OfferService offerService;
+    private final TelegramBot telegramBot;
 
     @KafkaListener(topics = "offer-topic", groupId = "telegram-bot")
     public void listen(ConsumerRecord<String, String> record) {
@@ -25,6 +26,7 @@ public class OfferKafkaListener {
         try {
             OfferDto offerDto = objectMapper.readValue(jsonString, OfferDto.class);
             offerService.generateImageWithText(offerDto);
+            telegramBot.sendPhoto(offerDto.getSessionId());
         } catch (Exception e) {
             log.error("Error processing Kafka message: {}", e.getMessage());
         }

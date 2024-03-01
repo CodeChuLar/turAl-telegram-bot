@@ -17,6 +17,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
@@ -32,6 +33,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -61,10 +65,11 @@ public class TelegramBot extends TelegramWebhookBot {
 
     private final RedisService redisService;
 
+    private final OfferService offerService;
+
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final Map<Long, Language> chatLanguage = new HashMap<>();
     static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
@@ -540,6 +545,19 @@ public class TelegramBot extends TelegramWebhookBot {
             execute(sendMessage);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
+        }
+    }
+
+    public void sendPhoto(UUID sessionId) {
+        long chatId = sessionService.get(sessionId).getClient().getChatId();
+        try {
+            byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
+
+            int messageId = offerService.sendPhotoToChat(chatId, imageBytes, "Offer ");
+
+            System.out.println("Photo sent successfully with message ID: " + messageId);
+        } catch (IOException e) {
+            System.out.println("An error occurred while reading the image file: " + e);
         }
     }
 

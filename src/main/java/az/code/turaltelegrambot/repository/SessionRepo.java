@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface SessionRepo extends JpaRepository<Session, UUID> {
     List<Session> findByClient_ChatId(long chatId);
     List<Session> findAllByClient_ChatId(long chatId);
+
+    Session findBySessionId(UUID sessionId);
 }

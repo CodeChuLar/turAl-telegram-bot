@@ -22,14 +22,16 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
-public class OfferService{
 
-    private final TelegramBot telegramBot;
+public class OfferService extends DefaultAbsSender {
+    public OfferService(@Value("${bot.token}") String telegramBotToken) {
+        super(new DefaultBotOptions(), telegramBotToken);
+    }
 
     public void generateImageWithText(OfferDto offerDto) {
         int width = 400;
@@ -70,6 +72,30 @@ public class OfferService{
             System.out.println("An error occurred while saving the image: " + e);
         }
     }
+
+    public int sendPhotoToChat(Long chatId, byte[] image, String caption) {
+        try {
+            // Convert byte array to file
+            File imageFile = File.createTempFile("temp", ".jpg");
+            FileOutputStream fos = new FileOutputStream(imageFile);
+            fos.write(image);
+            fos.close();
+
+            SendPhoto sendPhoto = new SendPhoto();
+            sendPhoto.setChatId(chatId);
+            InputFile inputFile = new InputFile();
+            inputFile.setMedia(imageFile);
+            sendPhoto.setPhoto(inputFile);
+            sendPhoto.setCaption(caption);
+
+            Message message = this.execute(sendPhoto);
+
+            return message.getMessageId();
+        } catch (IOException | TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }
 
