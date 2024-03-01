@@ -553,7 +553,7 @@ public class TelegramBot extends TelegramWebhookBot {
         try {
             byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
 
-            int messageId = offerService.sendPhotoToChat(chatId, imageBytes, "Offer ");
+            int messageId = offerService.sendPhotoToChat(chatId, imageBytes, "Offer ", getInlineKeyboardMarkup("Accept".lines().toList()));
 
             System.out.println("Photo sent successfully with message ID: " + messageId);
         } catch (IOException e) {
