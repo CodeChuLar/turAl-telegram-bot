@@ -1,5 +1,6 @@
 package az.code.turaltelegrambot.telegram;
 
+import az.code.turaltelegrambot.dto.OfferDto;
 import az.code.turaltelegrambot.entity.*;
 import az.code.turaltelegrambot.redis.RedisEntity;
 import az.code.turaltelegrambot.redis.RedisService;
@@ -17,7 +18,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
@@ -120,9 +120,23 @@ public class TelegramBot extends TelegramWebhookBot {
             }
 
         } else if (update.hasCallbackQuery()) {
-            sendNextQuestionByOption(update);
+            if (update.getCallbackQuery().getData().equalsIgnoreCase("Accept")) {
+                handleAccept(update.getCallbackQuery());
+            } else sendNextQuestionByOption(update);
         }
         return null;
+    }
+
+    private void handleAccept(CallbackQuery callbackQuery) {
+        Message message = (Message) callbackQuery.getMessage();
+        long chatId = message.getChatId();
+
+        String offerDto = callbackQuery.getData();
+        System.out.println(offerDto);
+        handleStopRequest(chatId);
+
+        //TODO: send accepted offerDto with mq(kafka)
+
     }
 
     private void sendFirstQuestion(Update update) {
@@ -320,7 +334,7 @@ public class TelegramBot extends TelegramWebhookBot {
             sendMessage.setText(question);
 
             if (!options.isEmpty() && !options.contains(null)) {
-                InlineKeyboardMarkup markupInline = getInlineKeyboardMarkup(options);
+                InlineKeyboardMarkup markupInline = getInlineKeyboardMarkup(options, null);
                 sendMessage.setReplyMarkup(markupInline);
             }
 
@@ -478,7 +492,7 @@ public class TelegramBot extends TelegramWebhookBot {
     }
 
     @NotNull
-    private static InlineKeyboardMarkup getInlineKeyboardMarkup(List<String> options) {
+    private static InlineKeyboardMarkup getInlineKeyboardMarkup(List<String> options, String optionalData) {
         if (options.contains(null))
             return null;
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -488,7 +502,9 @@ public class TelegramBot extends TelegramWebhookBot {
             List<InlineKeyboardButton> rowInline = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton();
             button.setText(option);
-            button.setCallbackData(option); // You can set callback data here if needed
+
+                button.setCallbackData(option);
+
             rowInline.add(button);
             rowsInline.add(rowInline);
         }
@@ -548,16 +564,21 @@ public class TelegramBot extends TelegramWebhookBot {
         }
     }
 
-    public void sendPhoto(UUID sessionId) {
+    public void sendPhoto(OfferDto offerDto) {
+        UUID sessionId = offerDto.getSessionId();
         long chatId = sessionService.get(sessionId).getClient().getChatId();
         try {
             byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
 
-            int messageId = offerService.sendPhotoToChat(chatId, imageBytes, "Offer ");
-
-            System.out.println("Photo sent successfully with message ID: " + messageId);
+            int messageId = offerService.sendPhotoToChat(chatId,
+                    imageBytes,
+                    "Offer ",
+                    getInlineKeyboardMarkup(
+                            "Accept".lines().toList(),
+                            offerDto.toString()));
+            log.info("Photo sent successfully with message ID: " + messageId);
         } catch (IOException e) {
-            System.out.println("An error occurred while reading the image file: " + e);
+            log.error("An error occurred while reading the image file: " + e.getMessage());
         }
     }
 

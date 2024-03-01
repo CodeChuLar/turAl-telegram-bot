@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -42,7 +43,7 @@ public class OfferService extends DefaultAbsSender {
         try {
             backgroundImage = ImageIO.read(new File("src/main/resources/img_2.png"));
         } catch (IOException e) {
-            System.out.println(e);
+            log.error(e.getMessage());
         }
 
         if (backgroundImage == null) {
@@ -73,7 +74,7 @@ public class OfferService extends DefaultAbsSender {
         }
     }
 
-    public int sendPhotoToChat(Long chatId, byte[] image, String caption) {
+    public int sendPhotoToChat(Long chatId, byte[] image, String caption, InlineKeyboardMarkup acceptButton) {
         try {
             // Convert byte array to file
             File imageFile = File.createTempFile("temp", ".jpg");
@@ -87,6 +88,7 @@ public class OfferService extends DefaultAbsSender {
             inputFile.setMedia(imageFile);
             sendPhoto.setPhoto(inputFile);
             sendPhoto.setCaption(caption);
+            sendPhoto.setReplyMarkup(acceptButton);
 
             Message message = this.execute(sendPhoto);
 
@@ -95,8 +97,6 @@ public class OfferService extends DefaultAbsSender {
             throw new RuntimeException(e);
         }
     }
-
-
 }
 
 
