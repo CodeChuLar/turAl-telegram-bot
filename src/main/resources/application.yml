@@ -32,8 +32,8 @@ spring:
         group-id: telegram-bot
 
 bot:
-  username: TURAL_AL_bOt
-  token: 6272012662:AAEmo1Hsd5Th-r35YjBOlD7aOwUhSUtROhg
+  username: nathembot
+  token: 6468413949:AAGFrnxvt30k486yQxemiWGeeloclPACaYs
   path: ${NGROK}
 
 redis:
