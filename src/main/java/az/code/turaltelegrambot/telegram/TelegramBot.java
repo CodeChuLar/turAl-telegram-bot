@@ -120,9 +120,13 @@ public class TelegramBot extends TelegramWebhookBot {
             }
 
         } else if (update.hasCallbackQuery()) {
-            if (update.getCallbackQuery().getData().equalsIgnoreCase("Accept")) {
+            if (update.getCallbackQuery().getData().contains("offerId")) {
                 handleAccept(update.getCallbackQuery());
-            } else sendNextQuestionByOption(update);
+            } else {
+                System.out.println("not accepted");
+                sendNextQuestionByOption(update);
+            }
+            ;
         }
         return null;
     }
@@ -130,14 +134,33 @@ public class TelegramBot extends TelegramWebhookBot {
     private void handleAccept(CallbackQuery callbackQuery) {
         Message message = (Message) callbackQuery.getMessage();
         long chatId = message.getChatId();
+        Chat chat = new Chat();
+        chat.setId(chatId);
 
-        String offerDto = callbackQuery.getData();
-        System.out.println(offerDto);
+        String acceptedOffer = callbackQuery.getData();
+//      TODO  List<Integer> offersMessages =
+//      TODO  removeInlineKeyboard(chatId, ); // butun ne button varsa hamsini silir chatdan
         handleStopRequest(chatId);
 
+        System.out.println(acceptedOffer);
         //TODO: send accepted offerDto with mq(kafka)
 
     }
+
+    /*public void removeInlineKeyboard(Long chatId) {
+        DeleteMessage deleteMessage = new DeleteMessage(String.valueOf(chatId), messageId);
+
+        try {
+            execute(deleteMessage);
+            execute(SendMessage.builder()
+                    .chatId(chatId)
+                    .text("You accepted an offer! Thank you for choosing us")
+                    .parseMode(ParseMode.MARKDOWN)
+                    .build());
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
+        }
+    }*/
 
     private void sendFirstQuestion(Update update) {
         Message message = update.getMessage();
@@ -502,8 +525,7 @@ public class TelegramBot extends TelegramWebhookBot {
             List<InlineKeyboardButton> rowInline = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton();
             button.setText(option);
-
-                button.setCallbackData(option);
+            button.setCallbackData(Objects.requireNonNullElse(optionalData, option));
 
             rowInline.add(button);
             rowsInline.add(rowInline);
@@ -569,13 +591,14 @@ public class TelegramBot extends TelegramWebhookBot {
         long chatId = sessionService.get(sessionId).getClient().getChatId();
         try {
             byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
+            String callbackData = "offerId: " + offerDto.getId() + " sessionId:" + offerDto.getSessionId();
 
             int messageId = offerService.sendPhotoToChat(chatId,
                     imageBytes,
                     "Offer ",
                     getInlineKeyboardMarkup(
                             "Accept".lines().toList(),
-                            offerDto.toString()));
+                            callbackData));
             log.info("Photo sent successfully with message ID: " + messageId);
         } catch (IOException e) {
             log.error("An error occurred while reading the image file: " + e.getMessage());
