@@ -3,12 +3,11 @@ package az.code.turaltelegrambot.botTests;
 
 import az.code.turaltelegrambot.entity.Language;
 import az.code.turaltelegrambot.telegram.TelegramBot;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -24,7 +23,11 @@ public class WaitingForOffersTests {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.initMocks(this);
+        try(AutoCloseable autoCloseable = MockitoAnnotations.openMocks(this)){
+            System.out.printf(autoCloseable.toString());
+        }catch (Exception e){
+            System.out.println(e.getMessage());
+        };
     }
 
     @Test
@@ -33,8 +36,7 @@ public class WaitingForOffersTests {
         Language language = Language.EN;
         String expectedMessage = "Your request has been recorded. Offers will be sent to you as soon as possible.";
         doNothing().when(telegramBot).execute(any(SendMessage.class));
-        telegramBot.sendWaitingMessageToClient(chatId, language);
-
+        Assertions.assertAll(() -> telegramBot.sendWaitingMessageToClient(chatId, language));
 
     }
 
