@@ -26,7 +26,7 @@ public class OfferKafkaListener {
         try {
             OfferDto offerDto = objectMapper.readValue(jsonString, OfferDto.class);
             offerService.generateImageWithText(offerDto);
-            telegramBot.sendPhoto(offerDto.getSessionId());
+            telegramBot.sendPhoto(offerDto);
         } catch (Exception e) {
             log.error("Error processing Kafka message: {}", e.getMessage());
         }

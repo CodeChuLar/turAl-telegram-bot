@@ -43,7 +43,7 @@ public class OfferService extends DefaultAbsSender {
         try {
             backgroundImage = ImageIO.read(new File("src/main/resources/img_2.png"));
         } catch (IOException e) {
-            System.out.println(e);
+            log.error(e.getMessage());
         }
 
         if (backgroundImage == null) {
@@ -97,8 +97,6 @@ public class OfferService extends DefaultAbsSender {
             throw new RuntimeException(e);
         }
     }
-
-
 }
 
 
