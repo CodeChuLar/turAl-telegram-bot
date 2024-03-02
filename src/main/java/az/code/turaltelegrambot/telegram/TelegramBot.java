@@ -142,7 +142,8 @@ public class TelegramBot extends TelegramWebhookBot {
 //      TODO  removeInlineKeyboard(chatId, ); // butun ne button varsa hamsini silir chatdan
         handleStopRequest(chatId);
 
-        System.out.println(acceptedOffer);
+        log.info("sent offerDto {}", acceptedOffer);
+        kafkaTemplate.send("accept-offer-topic", acceptedOffer);
         //TODO: send accepted offerDto with mq(kafka)
 
     }
@@ -410,7 +411,7 @@ public class TelegramBot extends TelegramWebhookBot {
                 // Instead of sending just the JSON object, send the session object
                 sendSessionToAnotherApp(session);
 
-                redisService.clearCache();
+                redisService.remove(chatId);
 
                 sendWaitingMessageToClient(chatId, chatLanguage.get(chatId));
             } else {
@@ -591,7 +592,7 @@ public class TelegramBot extends TelegramWebhookBot {
         long chatId = sessionService.get(sessionId).getClient().getChatId();
         try {
             byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
-            String callbackData = "offerId: " + offerDto.getId() + " sessionId:" + offerDto.getSessionId();
+            String callbackData = "offerId: " + offerDto.getOfferId() + " sessionId:" + offerDto.getSessionId();
 
             int messageId = offerService.sendPhotoToChat(chatId,
                     imageBytes,
