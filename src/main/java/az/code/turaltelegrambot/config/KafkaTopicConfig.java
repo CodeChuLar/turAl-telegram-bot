@@ -15,10 +15,17 @@ public class KafkaTopicConfig {
                 .build();
     }
 
-
     @Bean
     public NewTopic clientSender() {
         return TopicBuilder.name("client-new-topic")
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic AcceptOfferSender() {
+        return TopicBuilder.name("accept-offer-topic")
                 .partitions(3)
                 .replicas(1)
                 .build();
