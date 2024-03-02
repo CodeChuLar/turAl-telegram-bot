@@ -21,4 +21,6 @@ public class Client {
     long chatId;
     String fullName;
     String phoneNumber;
+    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    List<Offer> offers;
 }

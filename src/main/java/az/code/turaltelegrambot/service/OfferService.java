@@ -2,20 +2,19 @@ package az.code.turaltelegrambot.service;
 
 
 import az.code.turaltelegrambot.dto.OfferDto;
-import az.code.turaltelegrambot.telegram.TelegramBot;
-import lombok.RequiredArgsConstructor;
+import az.code.turaltelegrambot.entity.Offer;
+import az.code.turaltelegrambot.repository.OfferRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
-import org.apache.kafka.common.message.DescribeUserScramCredentialsRequestData;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.DefaultAbsSender;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.springframework.beans.factory.annotation.Value;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 
@@ -25,13 +24,40 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 @Service
 @Slf4j
 
 public class OfferService extends DefaultAbsSender {
-    public OfferService(@Value("${bot.token}") String telegramBotToken) {
+
+    private final OfferRepository offerRepository;
+
+    public OfferService(@Value("${bot.token}") String telegramBotToken, OfferRepository offerRepository) {
         super(new DefaultBotOptions(), telegramBotToken);
+        this.offerRepository = offerRepository;
+    }
+
+    public void saveOffer(Offer offer){
+        offerRepository.save(offer);
+    }
+
+    public synchronized void sendButtonToChat(long chatId, String buttonText, String callbackData, int messageId) throws TelegramApiException {
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText(buttonText);
+        button   .setCallbackData(callbackData);
+
+        InlineKeyboardMarkup markupKeyboard = new InlineKeyboardMarkup();
+        markupKeyboard.setKeyboard(java.util.List.of(List.of(button)));
+
+        SendMessage message = new SendMessage();
+        message  .setChatId(chatId);
+        message  .setText("Click to see all offers");
+        message  .setReplyMarkup(markupKeyboard);
+        message .setReplyToMessageId(messageId);
+
+        execute(message);
+
     }
 
     public void generateImageWithText(OfferDto offerDto) {
