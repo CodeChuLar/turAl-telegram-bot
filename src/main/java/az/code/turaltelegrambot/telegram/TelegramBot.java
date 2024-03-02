@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.json.JSONObject;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -48,6 +49,7 @@ import java.util.regex.Pattern;
 @Component
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramWebhookBot {
+    private final ModelMapper modelMapper;
     @Value("${bot.token}")
     private String secretApiKey;
     @Value("${bot.username}")
@@ -122,6 +124,12 @@ public class TelegramBot extends TelegramWebhookBot {
         } else if (update.hasCallbackQuery()) {
             if (update.getCallbackQuery().getData().contains("offerId")) {
                 handleAccept(update.getCallbackQuery());
+            } else if (update.getCallbackQuery().getData().contains("show_more_offers")) {
+                try {
+                    handleCallback(update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getData());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             } else {
                 System.out.println("not accepted");
                 sendNextQuestionByOption(update);
@@ -587,22 +595,74 @@ public class TelegramBot extends TelegramWebhookBot {
         }
     }
 
-    public void sendPhoto(OfferDto offerDto) {
-        UUID sessionId = offerDto.getSessionId();
-        long chatId = sessionService.get(sessionId).getClient().getChatId();
-        try {
-            byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
-            String callbackData = "offerId: " + offerDto.getOfferId() + " sessionId:" + offerDto.getSessionId();
+    private boolean showMoreButtonStatus = true;
 
-            int messageId = offerService.sendPhotoToChat(chatId,
-                    imageBytes,
-                    "Offer ",
-                    getInlineKeyboardMarkup(
-                            "Accept".lines().toList(),
-                            callbackData));
-            log.info("Photo sent successfully with message ID: " + messageId);
+    public synchronized void sendPhoto(OfferDto offerDto) {
+        UUID sessionId = offerDto.getSessionId();
+
+        Client client = sessionService.get(sessionId).getClient();
+        Offer offer = new Offer();
+        offer.setPrice(offerDto.getPrice());
+        offer.setClient(client);
+        offer.setAdditionalInfo(offerDto.getAdditionalInfo());
+        offer.setSessionId(offerDto.getSessionId());
+        offer.setDateRange(offerDto.getDateRange());
+        offerService.saveOffer(offer);
+
+        List<Offer> offers = client.getOffers();
+        int offerCount = offers.size();
+
+        long chatId = sessionService.get(sessionId).getClient().getChatId();
+        int messageId = 0;
+        try {
+            if (offerCount == 3) {
+                String showMoreButton = "Show More";
+                String callbackData1 = "show_more_offers";
+                offerService.sendButtonToChat(chatId, showMoreButton, callbackData1, messageId);
+//                showMoreButtonStatus=false;
+            }
+            else if (offerCount<=3){
+                byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
+                String callbackData = "offerId: " + offerDto.getOfferId() + " sessionId:" + offerDto.getSessionId();
+
+                messageId = offerService.sendPhotoToChat(chatId,
+                        imageBytes,
+                        "Offer ",
+                        getInlineKeyboardMarkup(
+                                "Accept".lines().toList(),
+                                callbackData));
+                log.info("Photo sent successfully with message ID: " + messageId);
+
+            }
         } catch (IOException e) {
             log.error("An error occurred while reading the image file: " + e.getMessage());
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void handleCallback(long chatId, String callbackData) throws IOException {
+        if (callbackData.equals("show_more_offers")) {
+            Client client = clientService.getByChatId(chatId).get();
+            List<Offer> offers = client.getOffers();
+//            long chatId = client.getChatId();
+
+            StringBuilder messageText = new StringBuilder("Additional offers:\n");
+            for (int i = 3; i < offers.size(); i++) {
+//                Offer offer = offers.get(i);
+                OfferDto offerDto = modelMapper.map(offers.get(i), OfferDto.class);
+                byte[] imageBytes = Files.readAllBytes(Paths.get("image_with_text.jpg"));
+                String callbackData1 = "offerId: " + offerDto.getOfferId() + " sessionId:" + offerDto.getSessionId();
+
+                int messageId = offerService.sendPhotoToChat(chatId,
+                        imageBytes,
+                        "Offer ",
+                        getInlineKeyboardMarkup(
+                                "Accept".lines().toList(),
+                                callbackData1));
+                log.info("Photo sent successfully with message ID: " + messageId);
+            }
+
         }
     }
 
