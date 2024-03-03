@@ -11,4 +11,5 @@ public class OfferDto {
     private String dateRange;
     private String additionalInfo;
     private UUID sessionId;
+    private String companyName;
 }

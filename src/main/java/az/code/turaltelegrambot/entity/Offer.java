@@ -1,5 +1,6 @@
 package az.code.turaltelegrambot.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -25,6 +26,8 @@ public class Offer {
 
     @ManyToOne
     @JoinColumn(name = "client_id")
+    @ToString.Exclude
+    @JsonIgnore
     private Client client;
 }
 

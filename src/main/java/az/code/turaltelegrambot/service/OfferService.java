@@ -24,6 +24,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -38,23 +39,23 @@ public class OfferService extends DefaultAbsSender {
         this.offerRepository = offerRepository;
     }
 
-    public void saveOffer(Offer offer){
+    public void saveOffer(Offer offer) {
         offerRepository.save(offer);
     }
 
     public synchronized void sendButtonToChat(long chatId, String buttonText, String callbackData, int messageId) throws TelegramApiException {
         InlineKeyboardButton button = new InlineKeyboardButton();
         button.setText(buttonText);
-        button   .setCallbackData(callbackData);
+        button.setCallbackData(callbackData);
 
         InlineKeyboardMarkup markupKeyboard = new InlineKeyboardMarkup();
         markupKeyboard.setKeyboard(java.util.List.of(List.of(button)));
 
         SendMessage message = new SendMessage();
-        message  .setChatId(chatId);
-        message  .setText("Click to see all offers");
-        message  .setReplyMarkup(markupKeyboard);
-        message .setReplyToMessageId(messageId);
+        message.setChatId(chatId);
+        message.setText("Click to see all offers");
+        message.setReplyMarkup(markupKeyboard);
+        message.setReplyToMessageId(messageId);
 
         execute(message);
 
@@ -67,7 +68,7 @@ public class OfferService extends DefaultAbsSender {
         String backgroundImagePath = "background.jpg";
         BufferedImage backgroundImage = null;
         try {
-            backgroundImage = ImageIO.read(new File("src/main/resources/img_2.png"));
+            backgroundImage = ImageIO.read(new File("src/main/resources/offer_send.png"));
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -79,15 +80,28 @@ public class OfferService extends DefaultAbsSender {
         BufferedImage image = new BufferedImage(backgroundImage.getWidth(), backgroundImage.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics graphics = image.getGraphics();
         graphics.drawImage(backgroundImage, 0, 0, backgroundImage.getWidth(), backgroundImage.getHeight(), null);
-        graphics.setColor(Color.WHITE);
-        graphics.setFont(new Font("Arial", Font.BOLD, 30));
 
-        String text1 = offerDto.getDateRange();
-        String text2 = offerDto.getAdditionalInfo();
+        // Set color to #F7CE25
+        graphics.setColor(new Color(247, 206, 37)); // RGB values for #F7CE25
+
+        graphics.setFont(new Font("Montserrat", Font.BOLD, 65));
+
+        List<String> text1 = List.of(offerDto.getDateRange().split(","));
         String text3 = offerDto.getPrice();
-        graphics.drawString(text1, 100, 70);
-        graphics.drawString(text2, 100, 120);
-        graphics.drawString(text3, 100, 170);
+        String text4 = offerDto.getCompanyName();
+        graphics.drawString(text4, 800, 390);
+        graphics.drawString("$" + text3, 800, 780);
+        graphics.drawString(text1.get(0), 800, 1125);
+        graphics.drawString(text1.get(1), 800, 1225);
+
+        // Split additional info into lines with max 24 words each
+        String text2 = offerDto.getAdditionalInfo();
+        List<String> lines = splitAdditionalInfo(text2, 22);
+        int startY = 1600;
+        for (String line : lines) {
+            graphics.drawString(line, 300, startY);
+            startY += graphics.getFontMetrics().getHeight();
+        }
 
         graphics.dispose();
 
@@ -99,6 +113,29 @@ public class OfferService extends DefaultAbsSender {
             System.out.println("An error occurred while saving the image: " + e);
         }
     }
+
+    private List<String> splitAdditionalInfo(String additionalInfo, int maxCharsPerLine) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder lineBuilder = new StringBuilder();
+        int charCount = 0;
+
+        for (char c : additionalInfo.toCharArray()) {
+            if (charCount >= maxCharsPerLine && c != ' ') {
+                lines.add(lineBuilder.toString().trim());
+                lineBuilder = new StringBuilder();
+                charCount = 0;
+            }
+            lineBuilder.append(c);
+            charCount++;
+        }
+
+        if (lineBuilder.length() > 0) {
+            lines.add(lineBuilder.toString().trim());
+        }
+
+        return lines;
+    }
+
 
     public int sendPhotoToChat(Long chatId, byte[] image, String caption, InlineKeyboardMarkup acceptButton) {
         try {
