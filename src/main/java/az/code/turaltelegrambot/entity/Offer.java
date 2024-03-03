@@ -15,8 +15,7 @@ import java.util.UUID;
 @Table(name = "offers")
 public class Offer {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String price;
